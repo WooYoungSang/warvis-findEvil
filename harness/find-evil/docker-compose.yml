@@ -1,0 +1,52 @@
+# ITEM-212 FIND EVIL — build/test isolation
+# CPU-only enforced (NFR: GPU=0). No published ports by default.
+services:
+  find-evil-mcp:
+    image: python:3.11-slim
+    container_name: find-evil-mcp-dev
+    working_dir: /workspace
+    volumes:
+      - ../../:/workspace:rw
+      - find-evil-cases:/cases:rw
+    env_file:
+      - ./.env
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    command: ["bash", "-lc", "echo 'find-evil-mcp dev container — invoke via make targets'; sleep infinity"]
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 6g
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp:size=512m
+
+  find-evil-sift:
+    # Stand-in for SANS SIFT Workstation. Swap to OVA-derived image when available.
+    image: ubuntu:22.04
+    container_name: find-evil-sift
+    working_dir: /sift
+    volumes:
+      - find-evil-cases:/cases:rw
+    command: ["bash", "-lc", "sleep infinity"]
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4g
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  find-evil-cases:
+    name: find-evil-cases

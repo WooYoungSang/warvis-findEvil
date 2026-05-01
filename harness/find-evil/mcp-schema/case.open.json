@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "case.open",
+  "description": "Opens a forensic case from a single evidence source (disk image, memory capture, logs, or network capture). Creates an isolated sandbox and registers the case in the FIND EVIL orchestrator.",
+  "type": "object",
+  "properties": {
+    "inputSchema": {
+      "type": "object",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "image_path": {
+              "type": "string",
+              "pattern": "^/evidence/[a-zA-Z0-9._/-]+$",
+              "description": "Absolute path to disk image on SIFT host. Must be under /evidence/."
+            }
+          },
+          "required": ["image_path"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mem_path": {
+              "type": "string",
+              "pattern": "^/evidence/[a-zA-Z0-9._/-]+$",
+              "description": "Absolute path to memory dump on SIFT host. Must be under /evidence/."
+            }
+          },
+          "required": ["mem_path"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "pcap_path": {
+              "type": "string",
+              "pattern": "^/evidence/[a-zA-Z0-9._/-]+$",
+              "description": "Absolute path to PCAP network capture on SIFT host. Must be under /evidence/."
+            }
+          },
+          "required": ["pcap_path"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "logdir_path": {
+              "type": "string",
+              "pattern": "^/evidence/[a-zA-Z0-9._/-]+$",
+              "description": "Absolute path to log directory on SIFT host. Must be under /evidence/."
+            }
+          },
+          "required": ["logdir_path"],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Input must specify exactly one evidence source. All paths must be absolute and under /evidence/ on the SIFT host."
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 case identifier. Used as namespace for all subsequent operations."
+        },
+        "sandbox_root": {
+          "type": "string",
+          "pattern": "^/cases/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/$",
+          "description": "Absolute path to case sandbox directory. All case data isolated under this tree."
+        },
+        "accepted_inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["disk_image", "memory_dump", "pcap", "log_directory"],
+                "description": "Type of evidence source accepted."
+              },
+              "path": {
+                "type": "string",
+                "pattern": "^/evidence/[a-zA-Z0-9._/-]+$",
+                "description": "Original path from SIFT host."
+              }
+            },
+            "required": ["kind", "path"],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Array containing single accepted input spec."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of case creation."
+        }
+      },
+      "required": ["case_id", "sandbox_root", "accepted_inputs", "created_at"],
+      "additionalProperties": false,
+      "description": "Case opening result with isolated sandbox root and evidence registration."
+    }
+  },
+  "required": ["inputSchema", "outputSchema"],
+  "additionalProperties": false,
+  "x-mcp-capability": {
+    "name": "case.open",
+    "version": "0.1.0",
+    "description": "Register and sandbox a forensic evidence source.",
+    "side_effects": [
+      "fs:create_sandbox",
+      "fs:mkdir_cases_tree"
+    ],
+    "host": "sift_docker_proxy",
+    "subprocess": [],
+    "constraints": [
+      "All input paths must start with /evidence/ (SIFT host perspective)",
+      "All output paths must start with /cases/ (orchestrator perspective)",
+      "No shell access; no arbitrary file read/write",
+      "Case sandbox is read-write for case.open only; other tools are read-only on evidence, write-only on /cases/<id>/report/"
+    ]
+  }
+}

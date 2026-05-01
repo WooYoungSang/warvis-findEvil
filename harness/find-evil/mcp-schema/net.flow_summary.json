@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "net.flow_summary",
+  "description": "Summarize network flows from PCAP using Zeek or Suricata. Returns structured flow records with suspicious behavior flags.",
+  "type": "object",
+  "properties": {
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 case identifier from case.open."
+        },
+        "pcap_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 identifier for specific PCAP file within case."
+        },
+        "top_n": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 50,
+          "description": "Maximum number of flows to return (default 50). Flows sorted by bytes descending."
+        }
+      },
+      "required": ["case_id", "pcap_id"],
+      "additionalProperties": false,
+      "description": "Case and PCAP identifiers required; top_n optional (default 50)."
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "Echo of input case_id."
+        },
+        "pcap_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "Echo of input pcap_id."
+        },
+        "flows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "src_ip": {
+                "type": "string",
+                "description": "Source IP address (IPv4 or IPv6)."
+              },
+              "dst_ip": {
+                "type": "string",
+                "description": "Destination IP address (IPv4 or IPv6)."
+              },
+              "src_port": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535,
+                "description": "Source port number."
+              },
+              "dst_port": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535,
+                "description": "Destination port number."
+              },
+              "proto": {
+                "type": "string",
+                "enum": ["tcp", "udp", "icmp", "other"],
+                "description": "Network protocol."
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total bytes transferred in this flow."
+              },
+              "packets": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total packets in this flow."
+              },
+              "first_seen": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO 8601 timestamp of first packet."
+              },
+              "last_seen": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO 8601 timestamp of last packet."
+              },
+              "suspicious_flags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["beacon_periodicity", "rare_geo", "tls_ja3_match", "low_volume_dns_tunnel"]
+                },
+                "description": "Array of suspicion markers. Empty if flow appears normal."
+              }
+            },
+            "required": ["src_ip", "dst_ip", "src_port", "dst_port", "proto", "bytes", "packets", "first_seen", "last_seen", "suspicious_flags"],
+            "additionalProperties": false
+          },
+          "description": "Array of network flows (up to top_n largest by bytes)."
+        },
+        "total_flows": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of unique flows in PCAP (may exceed top_n)."
+        },
+        "tool_used": {
+          "type": "string",
+          "enum": ["zeek", "suricata"],
+          "description": "SIFT tool that performed network analysis."
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of analysis completion."
+        }
+      },
+      "required": ["case_id", "pcap_id", "flows", "total_flows", "tool_used", "generated_at"],
+      "additionalProperties": false,
+      "description": "Network flow summary with suspicious behavior classification."
+    }
+  },
+  "required": ["inputSchema", "outputSchema"],
+  "additionalProperties": false,
+  "x-mcp-capability": {
+    "name": "net.flow_summary",
+    "version": "0.1.0",
+    "description": "Extract and summarize network flows from PCAP (Zeek or Suricata).",
+    "side_effects": [
+      "subprocess:zeek",
+      "subprocess:suricata",
+      "fs:read:sandbox"
+    ],
+    "host": "sift_docker_proxy",
+    "subprocess": ["zeek", "suricata"],
+    "constraints": [
+      "case_id and pcap_id must be valid UUIDs",
+      "pcap_id must reference a valid PCAP file within case sandbox",
+      "top_n must be between 1 and 1000 (default 50)",
+      "Only zeek or suricata subprocess permitted",
+      "src/dst IP addresses must be valid IPv4 or IPv6 format",
+      "src/dst port must be in range 0-65535",
+      "proto enum constrains to tcp, udp, icmp, or other",
+      "suspicious_flags array must use only whitelisted enum values",
+      "Flow timestamps must be ISO 8601 format",
+      "flows array must be sorted by bytes descending"
+    ]
+  }
+}

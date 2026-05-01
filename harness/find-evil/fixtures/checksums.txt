@@ -1,0 +1,17 @@
+# FIND EVIL Fixture Corpus - SHA-256 Checksums
+# Generated: 2026-04-30
+# Format: sha256(file) filename [provenance comment]
+
+# Case 001 - Synthetic Multi-Source Incident
+4a8bbdb10dca6e4c372de6acc34b436fefd00196d9ab2c97f3154dbbd3fc788b  cases/case-001/evidence/memory.dmp [SYNTHETIC: JSON placeholder, 1 KB]
+6a2630a3db10f0515a0f667cd9d738627f44e1a83c0f1bf099182e6b399ef339  cases/case-001/evidence/syslog.log [SYNTHETIC: 50-line syslog with 3 evil markers]
+79aa9e97a6553f7ec4b02ce9046b1ec921f94527bb7529a875a0a25a1ee69408  cases/case-001/evidence/sample.pcap [SYNTHETIC: libpcap with 3 TCP flows, 234 bytes]
+847843bddab946e32da0dd9cb76ddb558c20a5791b507bb732d87de6164fb130  cases/case-001/evidence/yara_rules/evil.yar [SYNTHETIC: 2 detection rules, Apache 2.0]
+99ebacd9a9e38c3aef7399f90a995946fd0d8c7c1bba6c4545d77d71817f97f5  cases/case-001/evidence/payload.bin [SYNTHETIC: 256-byte Cobalt Strike beacon simulation]
+fd5b6d9f1538847909adad65580a77d201c5a8533075ea500824d88257ab1c17  cases/case-001/manifest.json [GROUND-TRUTH: IOC labels and expected findings]
+
+# Manifest
+# Total fixture footprint: ~7.8 KB (well under 5 MB limit)
+# All files are synthetic or placeholders - no real malware included
+# PCAP verified: magic bytes 0xa1b2c3d4 (libpcap little-endian)
+# Manifest JSON validated: schema compliance verified

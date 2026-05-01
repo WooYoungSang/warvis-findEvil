@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "memory.process_list",
+  "description": "Extract process list from memory dump using Volatility3. Returns structured array of processes with creation/exit times and suspicion flags.",
+  "type": "object",
+  "properties": {
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 case identifier from case.open."
+        },
+        "kdbg_offset": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]+$",
+          "description": "Optional hex offset (0x...) of KDBG structure for manual memory analysis. If omitted, Volatility3 auto-detects."
+        }
+      },
+      "required": ["case_id"],
+      "additionalProperties": false,
+      "description": "Case identifier required; KDBG offset optional for advanced debugging."
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "Echo of input case_id."
+        },
+        "processes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pid": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Process ID (always non-negative)."
+              },
+              "ppid": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Parent process ID (always non-negative)."
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 64,
+                "description": "Process name or executable basename (max 64 chars)."
+              },
+              "create_time": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO 8601 process creation timestamp."
+              },
+              "exit_time": {
+                "type": ["string", "null"],
+                "format": "date-time",
+                "description": "ISO 8601 process exit timestamp (null if still running at dump time)."
+              },
+              "suspicious_flags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["hidden", "unlinked", "no_image", "code_injected"]
+                },
+                "description": "Array of suspicion markers. Empty if process appears normal."
+              }
+            },
+            "required": ["pid", "ppid", "name", "create_time", "suspicious_flags"],
+            "additionalProperties": false
+          },
+          "description": "Array of processes extracted from memory image."
+        },
+        "mem_image_path": {
+          "type": "string",
+          "pattern": "^/cases/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/memory\\.dmp$",
+          "description": "Absolute path to memory dump analyzed."
+        },
+        "tool_used": {
+          "type": "string",
+          "enum": ["volatility3"],
+          "description": "Tool that generated the process list."
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of analysis completion."
+        }
+      },
+      "required": ["case_id", "processes", "mem_image_path", "tool_used", "generated_at"],
+      "additionalProperties": false,
+      "description": "Process list with timestamps, parent relationships, and suspicion flags."
+    }
+  },
+  "required": ["inputSchema", "outputSchema"],
+  "additionalProperties": false,
+  "x-mcp-capability": {
+    "name": "memory.process_list",
+    "version": "0.1.0",
+    "description": "Extract and enumerate processes from memory dump (Volatility3).",
+    "side_effects": [
+      "subprocess:volatility3",
+      "fs:read:sandbox"
+    ],
+    "host": "sift_docker_proxy",
+    "subprocess": ["volatility3"],
+    "constraints": [
+      "case_id must be valid UUID v4 from case.open",
+      "kdbg_offset pattern enforces hex format 0x...",
+      "Only volatility3 subprocess permitted",
+      "Process timestamps must be ISO 8601 format",
+      "exit_time must be null for running processes (dump-time snapshot)",
+      "suspicious_flags array must use only whitelisted enum values",
+      "mem_image_path must be under /cases/<case_id>/memory.dmp"
+    ]
+  }
+}

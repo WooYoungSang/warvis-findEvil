@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "verify.cross_check",
+  "description": "Self-correction tool: re-verify a finding against multiple independent sources. Returns confidence scores and verdict for IR agent decision-making.",
+  "type": "object",
+  "properties": {
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 case identifier from case.open."
+        },
+        "finding_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 finding identifier from report.append."
+        },
+        "method": {
+          "type": "string",
+          "enum": ["rerun", "alt_tool", "counter_evidence", "all"],
+          "default": "all",
+          "description": "Cross-check method. rerun=same tool again, alt_tool=different tool, counter_evidence=look for contradictions, all=all methods."
+        }
+      },
+      "required": ["case_id", "finding_id"],
+      "additionalProperties": false,
+      "description": "Case and finding identifiers required; verification method optional (default all)."
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "Echo of input case_id."
+        },
+        "finding_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "Echo of input finding_id."
+        },
+        "agreements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": ["rerun", "alt_tool", "counter_evidence"],
+                "description": "Verification method used."
+              },
+              "observation": {
+                "type": "string",
+                "description": "Summary of corroborating evidence or observation."
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Confidence weight (0-1) for this agreement."
+              }
+            },
+            "required": ["method", "observation", "weight"],
+            "additionalProperties": false
+          },
+          "description": "Array of corroborating observations."
+        },
+        "disagreements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": ["rerun", "alt_tool", "counter_evidence"],
+                "description": "Verification method used."
+              },
+              "observation": {
+                "type": "string",
+                "description": "Summary of contradicting evidence or null result."
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Confidence weight (0-1) for this disagreement."
+              }
+            },
+            "required": ["method", "observation", "weight"],
+            "additionalProperties": false
+          },
+          "description": "Array of contradicting observations."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Overall confidence score (0-1) for finding validity."
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["confirmed", "contradicted", "inconclusive"],
+          "description": "Final verdict based on cross-check evidence."
+        },
+        "tool_used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of tools invoked during verification (read-only; internal decisions)."
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of cross-check completion."
+        }
+      },
+      "required": ["case_id", "finding_id", "agreements", "disagreements", "confidence", "verdict", "tool_used", "generated_at"],
+      "additionalProperties": false,
+      "description": "Cross-check results with confidence scoring and final verdict."
+    }
+  },
+  "required": ["inputSchema", "outputSchema"],
+  "additionalProperties": false,
+  "x-mcp-capability": {
+    "name": "verify.cross_check",
+    "version": "0.1.0",
+    "description": "Agent-driven self-correction: re-verify findings against multiple sources for confidence scoring.",
+    "side_effects": [
+      "fs:read:sandbox"
+    ],
+    "host": "sift_docker_proxy",
+    "subprocess": [],
+    "constraints": [
+      "case_id and finding_id must be valid UUIDs",
+      "finding_id must exist in /cases/<case_id>/report/findings.jsonl",
+      "method enum restricts to rerun, alt_tool, counter_evidence, or all",
+      "agreements and disagreements must each be non-empty arrays (at least one observation expected)",
+      "weight values constrain to 0-1 (floating-point confidence)",
+      "confidence final score computed from weights (implementer responsibility)",
+      "verdict enum constrains to confirmed, contradicted, or inconclusive",
+      "tool_used array is read-only audit trail (internal tool decisions only)",
+      "NO subprocess calls permitted (internal logic only; other tools read sandbox, don't re-invoke)",
+      "Cross-check must preserve finding integrity (no mutations to findings.jsonl)"
+    ]
+  }
+}

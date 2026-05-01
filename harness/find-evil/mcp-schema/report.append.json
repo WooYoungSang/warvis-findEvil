@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "report.append",
+  "description": "Append a structured forensic finding to the case report. Maintains integrity via hash chain. Only tool with write access to /cases/<id>/report/.",
+  "type": "object",
+  "properties": {
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 case identifier from case.open."
+        },
+        "finding": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "description": "Brief title of finding (1-128 chars)."
+            },
+            "severity": {
+              "type": "string",
+              "enum": ["info", "low", "medium", "high", "critical"],
+              "description": "Severity classification."
+            },
+            "narrative": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192,
+              "description": "Detailed narrative of finding, evidence, and analysis (1-8192 chars)."
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["process", "file", "flow", "log", "yara", "timeline"],
+                    "description": "Type of evidence artifact."
+                  },
+                  "ref": {
+                    "type": "string",
+                    "description": "Sandbox-relative path or reference (must not start with / or contain ..). Examples: memory.dmp, timeline.jsonl, flow_12345, log_entry_9999."
+                  }
+                },
+                "required": ["kind", "ref"],
+                "additionalProperties": false
+              },
+              "description": "Array of evidence artifacts supporting this finding."
+            },
+            "mitre_attack": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$",
+                "description": "MITRE ATT&CK technique ID (format: T1234 or T1234.001)."
+              },
+              "description": "Optional array of MITRE ATT&CK technique IDs."
+            }
+          },
+          "required": ["title", "severity", "narrative", "evidence"],
+          "additionalProperties": false,
+          "description": "Structured finding object."
+        }
+      },
+      "required": ["case_id", "finding"],
+      "additionalProperties": false,
+      "description": "Case identifier and finding object required."
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "Echo of input case_id."
+        },
+        "finding_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 identifier for this appended finding."
+        },
+        "appended_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when finding was appended."
+        },
+        "report_path": {
+          "type": "string",
+          "pattern": "^/cases/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/report/findings\\.jsonl$",
+          "description": "Absolute path to report file (/cases/<case_id>/report/findings.jsonl)."
+        },
+        "prev_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hex hash of previous report state (or '0' if first entry). Enforces chain integrity."
+        },
+        "this_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hex hash of this finding entry. Implements write-once audit trail."
+        }
+      },
+      "required": ["case_id", "finding_id", "appended_at", "report_path", "prev_hash", "this_hash"],
+      "additionalProperties": false,
+      "description": "Append result with finding UUID and hash chain metadata."
+    }
+  },
+  "required": ["inputSchema", "outputSchema"],
+  "additionalProperties": false,
+  "x-mcp-capability": {
+    "name": "report.append",
+    "version": "0.1.0",
+    "description": "Append structured finding to forensic case report with hash chain integrity.",
+    "side_effects": [
+      "fs:write:report/findings.jsonl"
+    ],
+    "host": "sift_docker_proxy",
+    "subprocess": [],
+    "constraints": [
+      "case_id must be valid UUID v4",
+      "finding title 1-128 chars (concise summary)",
+      "finding severity must use enum: info, low, medium, high, critical",
+      "finding narrative 1-8192 chars (detailed analysis)",
+      "evidence ref must be sandbox-relative (no leading / or ..)",
+      "evidence kind enum constrains to process, file, flow, log, yara, timeline",
+      "mitre_attack pattern enforces T1234 or T1234.001 format",
+      "ONLY tool with /cases/<id>/report/ write permission",
+      "findings.jsonl format is JSON-Lines (one finding per line)",
+      "Hash chain: prev_hash is SHA-256 of previous report state before this append",
+      "this_hash is SHA-256 of canonical JSON of this finding (implementer handles hashing)",
+      "prev_hash '0' or all-zeros indicates first entry",
+      "No direct file read/write; report.append handles all I/O"
+    ]
+  }
+}

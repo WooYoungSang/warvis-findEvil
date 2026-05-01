@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "timeline.build",
+  "description": "Constructs a normalized forensic timeline from case evidence sources (disk, memory, logs). Outputs structured JSON-Lines with de-duplicated events sorted by timestamp.",
+  "type": "object",
+  "properties": {
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 case identifier from case.open."
+        },
+        "source_filter": {
+          "type": "string",
+          "enum": ["disk", "memory", "logs", "network", "all"],
+          "default": "all",
+          "description": "Restrict timeline to specific evidence source type. Default: all."
+        },
+        "since": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional ISO 8601 start timestamp. Events before this are excluded."
+        },
+        "until": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional ISO 8601 end timestamp. Events after this are excluded."
+        }
+      },
+      "required": ["case_id"],
+      "additionalProperties": false,
+      "description": "Case identifier required; time window and source filters optional."
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "Echo of input case_id."
+        },
+        "timeline_path": {
+          "type": "string",
+          "pattern": "^/cases/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/timeline\\.jsonl$",
+          "description": "Absolute path to generated timeline file (JSON-Lines format)."
+        },
+        "event_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of timeline events after de-duplication and filtering."
+        },
+        "tool_used": {
+          "type": "string",
+          "enum": ["plaso", "log2timeline"],
+          "description": "SIFT tool that generated the timeline."
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of timeline generation."
+        },
+        "sources_processed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["disk", "memory", "logs", "network"]
+          },
+          "description": "Evidence source types actually included in output."
+        }
+      },
+      "required": ["case_id", "timeline_path", "event_count", "tool_used", "generated_at"],
+      "additionalProperties": false,
+      "description": "Timeline metadata and reference to generated JSON-Lines file."
+    }
+  },
+  "required": ["inputSchema", "outputSchema"],
+  "additionalProperties": false,
+  "x-mcp-capability": {
+    "name": "timeline.build",
+    "version": "0.1.0",
+    "description": "Construct normalized forensic timeline from case evidence.",
+    "side_effects": [
+      "fs:write:timeline.jsonl",
+      "subprocess:plaso",
+      "subprocess:log2timeline"
+    ],
+    "host": "sift_docker_proxy",
+    "subprocess": ["plaso", "log2timeline"],
+    "constraints": [
+      "Output file must be in /cases/<case_id>/timeline.jsonl",
+      "No shell access; subprocess calls whitelisted only",
+      "Only plaso and log2timeline permitted",
+      "Events must be sorted by timestamp",
+      "Duplicates must be removed before output"
+    ]
+  }
+}

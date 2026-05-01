@@ -1,0 +1,154 @@
+{
+  "case_id": "11111111-2222-4333-8444-555555555555",
+  "case_name": "case-001",
+  "description": "Synthetic FIND EVIL fixture with embedded malware indicators",
+  "created_date": "2026-04-30",
+  "synthetic": true,
+  "expected_findings": {
+    "iocs.scan": [
+      {
+        "rule": "beacon_payload",
+        "path": "payload.bin",
+        "severity": "high",
+        "description": "Cobalt Strike beacon payload markers detected"
+      },
+      {
+        "rule": "rootkit_marker",
+        "path": "syslog.log",
+        "severity": "critical",
+        "description": "Rootkit module loading detected in syslog"
+      }
+    ],
+    "log.query": [
+      {
+        "q": "Failed password",
+        "source": "syslog.log",
+        "expected_min_hits": 4,
+        "severity": "medium",
+        "description": "SSH brute-force attempt (4 failed passwords from 198.51.100.7)"
+      },
+      {
+        "q": "rootkit.ko",
+        "source": "syslog.log",
+        "expected_min_hits": 1,
+        "severity": "critical",
+        "description": "Hostile kernel driver load attempt"
+      },
+      {
+        "q": "/bin/curl",
+        "source": "syslog.log",
+        "expected_min_hits": 1,
+        "severity": "high",
+        "description": "Suspicious curl command in sudo logs pointing to external malware URL"
+      },
+      {
+        "q": "malware.example",
+        "source": "syslog.log",
+        "expected_min_hits": 1,
+        "severity": "high",
+        "description": "Reference to suspicious external domain"
+      }
+    ],
+    "memory.process_list": [
+      {
+        "pid": 4,
+        "name": "kthreadd",
+        "suspicious_flags": [],
+        "description": "Kernel thread daemon (benign)"
+      },
+      {
+        "pid": 200,
+        "name": "systemd",
+        "suspicious_flags": [],
+        "description": "Init system (benign)"
+      },
+      {
+        "pid": 1337,
+        "name": "malicious_process",
+        "suspicious_flags": ["code_injected"],
+        "description": "Process with code injection detected"
+      }
+    ],
+    "memory.malfind": [
+      {
+        "pid": 1337,
+        "vad_start": "0x7fff0000",
+        "vad_end": "0x7fff1000",
+        "protection": "PAGE_EXECUTE_READWRITE",
+        "severity": "critical",
+        "description": "Injected memory region in process 1337 with suspicious permissions"
+      }
+    ],
+    "net.flow_summary": [
+      {
+        "src_ip": "10.10.10.10",
+        "dst_ip": "203.0.113.5",
+        "src_port": 12345,
+        "dst_port": 22,
+        "proto": "TCP",
+        "severity": "medium",
+        "description": "Outbound connection to suspicious IP on SSH port"
+      },
+      {
+        "src_ip": "10.10.10.11",
+        "dst_ip": "203.0.113.6",
+        "src_port": 12345,
+        "dst_port": 22,
+        "proto": "TCP",
+        "severity": "medium",
+        "description": "Second outbound connection to different suspicious IP"
+      },
+      {
+        "src_ip": "10.10.10.12",
+        "dst_ip": "203.0.113.7",
+        "src_port": 12345,
+        "dst_port": 22,
+        "proto": "TCP",
+        "severity": "medium",
+        "description": "Third outbound connection forming pattern"
+      }
+    ]
+  },
+  "fixture_files": {
+    "syslog.log": {
+      "size_bytes": 4927,
+      "description": "50-line syslog with 3 embedded evil markers",
+      "sha256": "placeholder_sha256_will_be_computed"
+    },
+    "payload.bin": {
+      "size_bytes": 256,
+      "description": "Binary payload with Cobalt Strike beacon markers",
+      "sha256": "placeholder_sha256_will_be_computed"
+    },
+    "sample.pcap": {
+      "size_bytes": 234,
+      "description": "Synthetic PCAP with 3 TCP SYN flows to suspicious IPs",
+      "sha256": "placeholder_sha256_will_be_computed"
+    },
+    "memory.dmp": {
+      "size_bytes": 1024,
+      "description": "Placeholder memory dump with JSON metadata",
+      "sha256": "placeholder_sha256_will_be_computed"
+    },
+    "yara_rules/evil.yar": {
+      "size_bytes": 432,
+      "description": "YARA rules for beacon_payload and rootkit_marker",
+      "sha256": "placeholder_sha256_will_be_computed"
+    }
+  },
+  "recall_targets": {
+    "iocs.scan": 2,
+    "log.query": 4,
+    "memory.process_list": 3,
+    "memory.malfind": 1,
+    "net.flow_summary": 3,
+    "total_expected_findings": 13
+  },
+  "notes": [
+    "All fixtures are synthetic. No real malware binaries included.",
+    "YARA rules are simple patterns suitable for PoC demonstration.",
+    "Memory dump is a placeholder; real Volatility3 compatibility not required for Phase 2 fixture test.",
+    "PCAP magic bytes verified (0xa1b2c3d4 little-endian).",
+    "Syslog contains exactly 3 'evil' markers as specified."
+  ]
+}

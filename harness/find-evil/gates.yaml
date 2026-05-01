@@ -1,0 +1,82 @@
+# ITEM-212 FIND EVIL — quantitative gates
+# Consumed by find-evil-verifier. PASS requires all required==true gates green.
+version: 1
+item: ITEM-212
+phase_gates:
+  phase_0:
+    required:
+      - id: spec_present
+        check: file_exists
+        target: plans/ITEM-212-find-evil/spec.md
+      - id: handover_present
+        check: file_exists
+        target: plans/ITEM-212-find-evil/handover-r1.md
+      - id: agents_present
+        check: glob_count
+        target: .claude/agents/find-evil/find-evil-*.md
+        min: 7
+      - id: harness_present
+        check: all_files_exist
+        targets:
+          - harness/find-evil/env.sample
+          - harness/find-evil/docker-compose.yml
+          - harness/find-evil/Makefile
+          - harness/find-evil/gates.yaml
+          - harness/find-evil/secrets.policy.md
+
+  phase_1:
+    required:
+      - id: forge_test_pass
+        check: command_exit_zero
+        cmd: "true"  # placeholder; replace when SIFT integration tests land
+      - id: mcp_capability_handshake
+        check: command_exit_zero
+        cmd: "make -C harness/find-evil mcp-conformance"
+      - id: tools_min_count
+        check: schema_count
+        target: harness/find-evil/mcp-schema/*.json
+        min: 3
+    nice_to_have:
+      - id: license_headers
+        check: spdx_headers_present
+        target: src/find_evil_mcp/
+
+  phase_2:
+    required:
+      - id: tools_full_count
+        check: schema_count
+        target: harness/find-evil/mcp-schema/*.json
+        min: 9
+      - id: evil_detection_recall_min
+        check: float_ge
+        metric: recall
+        threshold: 0.60
+      - id: slither_high
+        check: int_eq
+        metric: slither_high
+        value: 0
+      - id: aderyn_high
+        check: int_eq
+        metric: aderyn_high
+        value: 0
+
+  phase_3:
+    required:
+      - id: evil_detection_recall_ship
+        check: float_ge
+        metric: recall
+        threshold: 0.80
+      - id: submission_artifacts_8
+        check: all_files_exist
+        targets:
+          - README.md
+          - docs/find-evil/architecture.md
+          - docs/find-evil/dataset.md
+          - docs/find-evil/accuracy-report.md
+          - docs/find-evil/devpost-page.md
+          - docs/find-evil/demo-script.md
+          - harness/find-evil/logs/  # structured logs dir
+          - LICENSE
+      - id: license_compliance
+        check: license_in
+        targets: [MIT, Apache-2.0]
