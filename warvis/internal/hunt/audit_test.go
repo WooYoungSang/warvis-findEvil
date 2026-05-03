@@ -285,3 +285,72 @@ func TestAuditLogEmptyFile(t *testing.T) {
 		t.Fatalf("verify on empty file failed: %v", err)
 	}
 }
+
+func TestValidateJSONLIntegrity(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "hunt-jsonl-validate")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	auditPath := filepath.Join(tmpDir, "audit.jsonl")
+	auditLog, err := NewAuditLog(auditPath)
+	if err != nil {
+		t.Fatalf("failed to create audit log: %v", err)
+	}
+	defer auditLog.Close()
+
+	// Append valid entries
+	entries := []map[string]interface{}{
+		{"event": "case_opened", "case_id": "test-case"},
+		{"event": "state_transition", "from": "INITIALIZE", "to": "TRACE"},
+		{"event": "tool_called", "tool": "iocs.scan"},
+	}
+
+	for _, entry := range entries {
+		if err := auditLog.Append(entry); err != nil {
+			t.Fatalf("append failed: %v", err)
+		}
+	}
+	auditLog.Close()
+
+	// Validate JSONL integrity
+	if err := auditLog.ValidateJSONLIntegrity(auditPath); err != nil {
+		t.Fatalf("ValidateJSONLIntegrity failed: %v", err)
+	}
+}
+
+func TestValidateJSONLIntegrityWithMalformed(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "hunt-jsonl-malformed")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	auditPath := filepath.Join(tmpDir, "audit.jsonl")
+
+	// Write valid entry
+	auditLog, err := NewAuditLog(auditPath)
+	if err != nil {
+		t.Fatalf("failed to create audit log: %v", err)
+	}
+	if err := auditLog.Append(map[string]interface{}{"event": "case_opened"}); err != nil {
+		t.Fatalf("append failed: %v", err)
+	}
+	auditLog.Close()
+
+	// Manually append malformed JSON
+	file, err := os.OpenFile(auditPath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		t.Fatalf("failed to open file: %v", err)
+	}
+	file.WriteString("this is not valid json\n")
+	file.Close()
+
+	// Validate should fail
+	auditLog2, _ := NewAuditLog(auditPath)
+	if err := auditLog2.ValidateJSONLIntegrity(auditPath); err == nil {
+		t.Fatal("ValidateJSONLIntegrity should fail on malformed JSON")
+	}
+	auditLog2.Close()
+}

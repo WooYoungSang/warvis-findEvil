@@ -25,13 +25,19 @@ func serverCmd() []string {
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "usage: warvis <command> [args]")
-		fmt.Fprintln(os.Stderr, "  hunt <evidence-path>  — open case and advance to TRACE")
+		fmt.Fprintln(os.Stderr, "  hunt <evidence-path>    — open case and advance to TRACE")
+		fmt.Fprintln(os.Stderr, "  status <case-id>        — read case state and output JSON")
 		os.Exit(1)
 	}
 
 	switch os.Args[1] {
 	case "hunt":
 		if err := runHunt(os.Args[2:]); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	case "status":
+		if err := runStatus(os.Args[2:]); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
@@ -146,4 +152,43 @@ func parseCaseOpenResult(result *mcp.CallToolResult) (map[string]interface{}, er
 		}
 	}
 	return nil, fmt.Errorf("no text content in case.open result")
+}
+
+func runStatus(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: warvis status <case-id>")
+	}
+	caseID := args[0]
+
+	casesRoot := os.Getenv("FIND_EVIL_CASES_ROOT")
+	if casesRoot == "" {
+		casesRoot = "./.cases"
+	}
+
+	stateFile := filepath.Join(casesRoot, caseID, "state.json")
+
+	// Read state.json
+	data, err := os.ReadFile(stateFile)
+	if err != nil {
+		return fmt.Errorf("failed to read state file: %w", err)
+	}
+
+	var stateData map[string]interface{}
+	if err := json.Unmarshal(data, &stateData); err != nil {
+		return fmt.Errorf("failed to parse state file: %w", err)
+	}
+
+	// Extract relevant fields and output JSON
+	output := map[string]interface{}{
+		"case_id":       caseID,
+		"current_state": stateData["current_state"],
+		"started_at":    stateData["started_at"],
+		"updated_at":    stateData["updated_at"],
+		"llm_turns":     stateData["llm_turns"],
+		"tool_calls":    stateData["tool_calls"],
+	}
+
+	out, _ := json.Marshal(output)
+	fmt.Println(string(out))
+	return nil
 }

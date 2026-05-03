@@ -189,7 +189,7 @@ def evaluate(case_dir: Path) -> tuple[float, list[ToolResult]]:
         total_matched += matched_count
         missing = []
         if matched_count < expected_count:
-            keys = {tuple(sorted(it.items())) for it in matched_items}
+            _keys = {tuple(sorted(it.items())) for it in matched_items}
             for exp in expected:
                 summary_key = tuple(sorted(
                     (k, v) for k, v in exp.items()

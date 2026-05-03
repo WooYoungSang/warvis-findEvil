@@ -73,7 +73,7 @@ CASES_TMP    := /tmp/warvis-ks1-cases
 VENV_PY      := $(ROOT)/.venv-find-evil/bin/python
 SERVER_CMD   := $(VENV_PY) $(ROOT)/scripts/run_mcp_server.py
 
-.PHONY: kill-switch-check kill-switch-check-1 kill-switch-check-2 kill-switch-check-3
+.PHONY: kill-switch-check kill-switch-check-1 kill-switch-check-2 kill-switch-check-3 kill-switch-check-4 kill-switch-check-5
 
 $(WARVIS_BIN):
 	@cd $(ROOT)/warvis && go build -o bin/warvis ./cmd/warvis
@@ -127,5 +127,35 @@ kill-switch-check-3: $(WARVIS_BIN)
 	  test "$$GEMMA_RESPONSES" -gt 0 || { echo "FAILED: no gemma_response events"; exit 1; }; \
 	  echo "PASSED: tool_calls=$$TOOL_CALLS, gemma_responses=$$GEMMA_RESPONSES"
 
-kill-switch-check: kill-switch-check-1 kill-switch-check-2 kill-switch-check-3
-	@echo "✓ All 3 kill-switch tests PASSED"
+kill-switch-check-4: $(WARVIS_BIN)
+	@echo "=== Kill Switch Test 4: audit.jsonl JSONL integrity ==="
+	@rm -rf $(CASES_TMP) && mkdir -p $(CASES_TMP)
+	@set -e; \
+	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt /evidence/test.img 2>&1); \
+	  CASE_ID=$$(echo "$$OUT" | jq -r '.case_id' 2>/dev/null || echo ""); \
+	  if [ -z "$$CASE_ID" ]; then \
+	    CASE_ID=$$(ls -t $(CASES_TMP) 2>/dev/null | head -1); \
+	    test -n "$$CASE_ID" || { echo "FAILED: no case directory"; exit 1; }; \
+	  fi; \
+	  test -f $(CASES_TMP)/$$CASE_ID/audit.jsonl || { echo "FAILED: audit.jsonl not found"; exit 1; }; \
+	  while IFS= read -r line; do \
+	    echo "$$line" | jq . > /dev/null 2>&1 || { echo "FAILED: malformed JSON line in audit.jsonl"; exit 1; }; \
+	  done < $(CASES_TMP)/$$CASE_ID/audit.jsonl; \
+	  echo "PASSED: all audit.jsonl lines are valid JSON"
+
+kill-switch-check-5: $(WARVIS_BIN)
+	@echo "=== Kill Switch Test 5: warvis status JSON output ==="
+	@rm -rf $(CASES_TMP) && mkdir -p $(CASES_TMP)
+	@set -e; \
+	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt /evidence/test.img 2>&1); \
+	  CASE_ID=$$(echo "$$OUT" | jq -r '.case_id' 2>/dev/null || echo ""); \
+	  if [ -z "$$CASE_ID" ]; then \
+	    CASE_ID=$$(ls -t $(CASES_TMP) 2>/dev/null | head -1); \
+	    test -n "$$CASE_ID" || { echo "FAILED: no case directory"; exit 1; }; \
+	  fi; \
+	  STATUS=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) $(WARVIS_BIN) status $$CASE_ID 2>&1); \
+	  echo "$$STATUS" | jq -e '.current_state' > /dev/null 2>&1 || { echo "FAILED: missing or invalid current_state in status output"; exit 1; }; \
+	  echo "PASSED: warvis status outputs valid JSON with current_state"
+
+kill-switch-check: kill-switch-check-1 kill-switch-check-2 kill-switch-check-3 kill-switch-check-4 kill-switch-check-5
+	@echo "✓ All 5 kill-switch tests PASSED"

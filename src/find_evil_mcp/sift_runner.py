@@ -4,7 +4,6 @@ import subprocess
 import shutil
 import time
 import os
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Optional

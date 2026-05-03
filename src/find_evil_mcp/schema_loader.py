@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: MIT
 
 import json
-import os
 from pathlib import Path
-from jsonschema import Draft7Validator, ValidationError
+from jsonschema import Draft7Validator
 
 # Cache for loaded schemas and validators
 _SCHEMA_CACHE = {}
@@ -15,7 +14,8 @@ def _get_schema_path(tool_name: str) -> Path:
     # Walk up to find harness directory (works from any installation location)
     current = Path(__file__).resolve()
     while current != current.parent:
-        candidate = current.parent.parent / "harness" / "find-evil" / "mcp-schema" / f"{tool_name}.json"
+        mcp_schema_dir = current.parent.parent / "harness" / "find-evil" / "mcp-schema"
+        candidate = mcp_schema_dir / f"{tool_name}.json"
         if candidate.exists():
             return candidate
         current = current.parent

@@ -8,7 +8,9 @@ from find_evil_mcp.schema_loader import validate_input, validate_output
 from find_evil_mcp.tools.case_open import get_cases_root
 
 
-def _parse_timeline_jsonl(timeline_path: Path, query: str, limit: int = 1000) -> tuple[list, int, bool]:
+def _parse_timeline_jsonl(
+    timeline_path: Path, query: str, limit: int = 1000
+) -> tuple[list, int, bool]:
     """
     Parse timeline.jsonl and search for query matches (substring search, not regex).
 
@@ -88,9 +90,9 @@ async def handle_log_query(payload: dict) -> dict:
 
     case_id = payload["case_id"]
     q = payload["q"]
-    source = payload.get("source", "all")
-    since = payload.get("since", None)
-    until = payload.get("until", None)
+    _source = payload.get("source", "all")
+    _since = payload.get("since", None)
+    _until = payload.get("until", None)
     limit = payload.get("limit", 1000)
 
     cases_root = get_cases_root()

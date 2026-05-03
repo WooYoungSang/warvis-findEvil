@@ -102,6 +102,49 @@ func TestCallToolNotAllowed(t *testing.T) {
 	}
 }
 
+func TestScanStateToolsAllowed(t *testing.T) {
+	fsm := New("test-case", nil, nil)
+
+	// Transition to SCAN: INITIALIZE -> TRACE -> SCAN
+	_ = fsm.Transition("to trace")
+	_ = fsm.Transition("to scan")
+
+	// SCAN should allow iocs.scan, memory.*, net.flow_summary
+	scanTools := []string{"iocs.scan", "memory.process_list", "memory.malfind", "net.flow_summary"}
+	for _, tool := range scanTools {
+		if !fsm.IsToolAllowed(tool) {
+			t.Errorf("tool %s should be allowed in SCAN state", tool)
+		}
+	}
+
+	// SCAN should NOT allow timeline.build (TRACE tool)
+	if fsm.IsToolAllowed("timeline.build") {
+		t.Error("timeline.build should not be allowed in SCAN state")
+	}
+
+	// SCAN should NOT allow verify.cross_check (EXPOSE tool)
+	if fsm.IsToolAllowed("verify.cross_check") {
+		t.Error("verify.cross_check should not be allowed in SCAN state")
+	}
+}
+
+func TestScanStateCanCallAllowedTools(t *testing.T) {
+	fsm := New("test-case", nil, nil)
+
+	// Transition to SCAN
+	_ = fsm.Transition("to trace")
+	_ = fsm.Transition("to scan")
+
+	// Try calling allowed tools
+	result, err := fsm.CallTool(context.Background(), "iocs.scan", map[string]interface{}{"db": "test"})
+	if err != nil {
+		t.Fatalf("CallTool(iocs.scan) failed: %v", err)
+	}
+	if result == "" {
+		t.Fatal("CallTool should return non-empty result")
+	}
+}
+
 func TestTransitionINITIALIZE_TO_TRACE(t *testing.T) {
 	fsm := New("test-case", nil, nil)
 

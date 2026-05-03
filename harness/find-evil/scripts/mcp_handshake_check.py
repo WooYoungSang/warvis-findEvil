@@ -61,14 +61,17 @@ async def _check() -> int:
         errors.append(f"unexpected tools (Phase 2 leakage?): {sorted(extra)}")
     forbidden = FORBIDDEN_TOOLS & tool_names
     if forbidden:
-        errors.append(f"forbidden tools exposed (architectural constraint violation): {sorted(forbidden)}")
+        errors.append(
+            f"forbidden tools exposed (architectural constraint violation): {sorted(forbidden)}"
+        )
 
     if errors:
         for e in errors:
             print(f"FAIL: {e}", file=sys.stderr)
         return 1
 
-    print(f"mcp-conformance: PASS — {EXPECTED_NAME} v{EXPECTED_VERSION} with tools {sorted(tool_names)}")
+    tools_str = str(sorted(tool_names))
+    print(f"mcp-conformance: PASS — {EXPECTED_NAME} v{EXPECTED_VERSION} with tools {tools_str}")
     return 0
 
 

@@ -2,7 +2,6 @@
 
 import json
 from datetime import datetime, timezone
-from pathlib import Path
 
 from find_evil_mcp.schema_loader import validate_input, validate_output
 from find_evil_mcp.tools.case_open import get_cases_root
@@ -51,8 +50,8 @@ async def handle_timeline_build(payload: dict) -> dict:
 
     case_id = payload["case_id"]
     source_filter = payload.get("source_filter", "all")
-    since = payload.get("since")
-    until = payload.get("until")
+    _since = payload.get("since")
+    _until = payload.get("until")
 
     # Create timeline file path
     cases_root = get_cases_root()

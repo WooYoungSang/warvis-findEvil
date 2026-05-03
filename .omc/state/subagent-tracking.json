@@ -5,11 +5,47 @@
       "agent_type": "warvis-orchestrator",
       "started_at": "2026-05-03T03:39:05.392Z",
       "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-03T03:46:34.218Z",
+      "duration_ms": 448826
+    },
+    {
+      "agent_id": "aaa5f3f61b06846af",
+      "agent_type": "warvis-verifier",
+      "started_at": "2026-05-03T03:54:57.140Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-03T03:56:14.202Z",
+      "duration_ms": 77062
+    },
+    {
+      "agent_id": "aab874975f583f092",
+      "agent_type": "warvis-orchestrator",
+      "started_at": "2026-05-03T04:14:28.827Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-03T04:16:13.863Z",
+      "duration_ms": 105036
+    },
+    {
+      "agent_id": "a3fd0a451b9a3e5f6",
+      "agent_type": "general-purpose",
+      "started_at": "2026-05-03T04:16:21.017Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-03T04:19:56.156Z",
+      "duration_ms": 215139
+    },
+    {
+      "agent_id": "ace0d7e493ee05415",
+      "agent_type": "warvis-orchestrator",
+      "started_at": "2026-05-03T04:20:54.115Z",
+      "parent_mode": "none",
       "status": "running"
     }
   ],
-  "total_spawned": 1,
-  "total_completed": 0,
+  "total_spawned": 5,
+  "total_completed": 4,
   "total_failed": 0,
-  "last_updated": "2026-05-03T03:39:05.492Z"
+  "last_updated": "2026-05-03T04:20:54.217Z"
 }

@@ -46,7 +46,8 @@ async def handle_verify_cross_check(payload: dict) -> dict:
     Handle verify.cross_check tool invocation.
 
     Input: case_id, finding_id, method (optional, default "all")
-    Output: case_id, finding_id, agreements, disagreements, confidence, verdict, tool_used, generated_at
+    Output: case_id, finding_id, agreements, disagreements, confidence,
+    verdict, tool_used, generated_at
 
     Cross-check logic: re-verify findings via alternate tools (e.g., rerun timeline.build).
     """
@@ -78,7 +79,8 @@ async def handle_verify_cross_check(payload: dict) -> dict:
             try:
                 timeline_result = await handle_timeline_build({"case_id": case_id})
                 if timeline_result.get("event_count", 0) > 0:
-                    agreements.append(f"timeline.build confirmed {timeline_result['event_count']} events")
+                    count = timeline_result["event_count"]
+                    agreements.append(f"timeline.build confirmed {count} events")
                     confidence += 0.3
                     tool_used.append("plaso")
             except Exception:

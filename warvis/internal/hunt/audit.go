@@ -141,3 +141,31 @@ func (al *AuditLog) Verify(filepath string) error {
 
 	return nil
 }
+
+// ValidateJSONLIntegrity validates that all lines in the JSONL file are valid JSON.
+// Returns an error if any line is malformed or corrupted.
+func (al *AuditLog) ValidateJSONLIntegrity(filepath string) error {
+	file, err := os.Open(filepath)
+	if err != nil {
+		return fmt.Errorf("failed to open audit log: %w", err)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	lineNum := 0
+
+	for {
+		var entry map[string]interface{}
+		err := decoder.Decode(&entry)
+		if err != nil {
+			// EOF is expected
+			if err.Error() == "EOF" {
+				break
+			}
+			return fmt.Errorf("malformed JSON at line %d: %w", lineNum+1, err)
+		}
+		lineNum++
+	}
+
+	return nil
+}

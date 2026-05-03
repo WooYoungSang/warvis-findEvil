@@ -15,7 +15,8 @@ def _parse_zeek_conn_log(conn_log_path: Path, top_n: int = 50) -> tuple[list, in
     """
     Parse Zeek conn.log (TSV format) and extract flow summary.
 
-    Expected format: TSV with columns id.orig_h, id.orig_p, id.resp_h, id.resp_p, proto, orig_bytes, resp_bytes, orig_pkts, resp_pkts
+    Expected format: TSV with columns id.orig_h, id.orig_p, id.resp_h, id.resp_p,
+    proto, orig_bytes, resp_bytes, orig_pkts, resp_pkts
 
     Args:
         conn_log_path: Path to conn.log file
@@ -47,7 +48,8 @@ def _parse_zeek_conn_log(conn_log_path: Path, top_n: int = 50) -> tuple[list, in
                 continue
 
             # Map TSV columns to output schema (field indices may vary)
-            # Standard: id.orig_h, id.orig_p, id.resp_h, id.resp_p, proto, duration, orig_bytes, resp_bytes, ...
+            # Standard: id.orig_h, id.orig_p, id.resp_h, id.resp_p, proto,
+            # duration, orig_bytes, resp_bytes, ...
             flow = {
                 "src_ip": fields[0],
                 "src_port": int(fields[1]),

@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: MIT
 
-import sys
 import json
 import asyncio
 from mcp.server import Server
@@ -16,6 +15,9 @@ from find_evil_mcp.tools.log_query import handle_log_query
 from find_evil_mcp.tools.report_append import handle_report_append
 from find_evil_mcp.tools.verify_cross_check import handle_verify_cross_check
 from find_evil_mcp.schema_loader import get_output_schema
+
+
+_UUID_RE = "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 
 
 def create_server() -> Server:
@@ -88,7 +90,7 @@ def create_server() -> Server:
                     "properties": {
                         "case_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "source_filter": {
                             "type": "string",
@@ -111,7 +113,7 @@ def create_server() -> Server:
                     "properties": {
                         "case_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "ruleset": {
                             "type": "string",
@@ -135,7 +137,7 @@ def create_server() -> Server:
                     "properties": {
                         "case_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "kdbg_offset": {
                             "type": "string",
@@ -155,7 +157,7 @@ def create_server() -> Server:
                     "properties": {
                         "case_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "pid": {
                             "type": "integer",
@@ -175,11 +177,11 @@ def create_server() -> Server:
                     "properties": {
                         "case_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "pcap_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "top_n": {
                             "type": "integer",
@@ -201,7 +203,7 @@ def create_server() -> Server:
                     "properties": {
                         "case_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "q": {
                             "type": "string",
@@ -235,7 +237,7 @@ def create_server() -> Server:
                     "properties": {
                         "case_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "finding": {
                             "type": "object",
@@ -265,11 +267,11 @@ def create_server() -> Server:
                     "properties": {
                         "case_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "finding_id": {
                             "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "pattern": _UUID_RE,
                         },
                         "method": {
                             "type": "string",

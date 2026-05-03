@@ -6,7 +6,6 @@ import os
 import uuid
 import tempfile
 from datetime import datetime, timezone
-from pathlib import Path
 
 from find_evil_mcp.schema_loader import validate_input, validate_output
 from find_evil_mcp.tools.case_open import get_cases_root

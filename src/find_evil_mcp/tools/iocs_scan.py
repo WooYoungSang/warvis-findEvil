@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 
 import uuid
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -55,7 +54,7 @@ def _parse_yara_output(stdout: bytes, sandbox_root: Path) -> tuple[list, int]:
         path_str = loc_parts[0]
         try:
             offset = int(loc_parts[1])
-            length = int(loc_parts[2]) if len(loc_parts) > 2 else 0
+            _length = int(loc_parts[2]) if len(loc_parts) > 2 else 0
         except (ValueError, IndexError):
             continue
 
