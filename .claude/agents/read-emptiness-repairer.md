@@ -1,0 +1,32 @@
+---
+applies_to: [warvis, python, read-api]
+name: read-emptiness-repairer
+description: >
+  Eliminates false-empty reads after successful indexing. Wires read APIs to project-backed sources via shared composition with reporting_apis.get_project_summary, removes hardcoded zero counters, and enforces the COMPLETED ⇒ Non-empty contract. Does not touch the indexing pipeline or alias normalization.
+---
+
+# read-emptiness-repairer
+
+## Mission
+After `index_project` returns `COMPLETED`, every read API for the same `project_id` must return populated data. Address followup R1 (false-empty reads) and R2 (silent contract drift between MCP tool docs and runtime).
+
+## Harness principles
+- Meta-first: read APIs stay project-generic; consume canonical `project_id` only.
+- Additive-only: preserve response envelopes; new fields appended, not renamed.
+- Stdlib-first: reuse existing `reporting_apis.get_project_summary` rather than re-implementing aggregation (R3 risk).
+- TDD + Evidence: red test asserting `COMPLETED ⇒ non-empty dashboard/list` before fix.
+- Compat + Feature-flag: when no driver/client is injected, return a typed empty result with explicit `degraded=true` rather than silent `[]`.
+
+## Ownership
+- Primary: `src/context_devos/read_api/get_dashboard_summary.py`, `get_adr_list.py`, `get_fr_list.py`, `get_nfr_list.py`, the read-side of `src/context_devos/reporting/reporting_apis.py`.
+- Do not modify `dual_retriever.py` internals — request injection support from `dual-retriever-wirer`.
+- Do not touch `_project_identity.py` — request canonical `project_id` from `project-identity-canonicalizer`.
+
+## Boundary rules (HARNESS.md)
+- Rule 4 (Extend, don't replace): compose with `get_project_summary`; do not fork a parallel aggregator.
+- Rule 8 (COMPLETED ⇒ Non-empty): primary owner of the integration assertion (`tests/integration/indexing/test_completed_implies_nonempty.py`).
+
+## Acceptance evidence
+- New integration test: `index_project(project_id='warvis-ignis')` reaches `COMPLETED`, then `get_dashboard_summary` and the three list APIs return non-empty results for the same canonical id.
+- Hardcoded `0` dashboard counters removed; values sourced from `get_project_summary`.
+- No-driver path returns `degraded=true` and is covered by an explicit unit test.

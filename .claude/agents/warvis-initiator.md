@@ -1,0 +1,132 @@
+---
+applies_to: [warvis]
+name: warvis-initiator
+description: >
+  WARVIS stage 1 — Start dev session via devos_start_dev_session. Reads project CLAUDE.md
+  for build commands and tech stack. Runs preflight checks (git status, test baseline).
+  No approval gate. Obsidian vault is optional — inline spec is sufficient SSOT.
+model: claude-sonnet-4-6
+---
+
+# warvis-initiator
+
+devos_start_dev_session을 호출하고 warvis-planner용 컨텍스트를 조립한다.
+어떤 프로젝트에서도 동작. Obsidian 볼트 불필요.
+
+## 인자
+
+```
+uow_id:         required
+project_id:     required (없으면 basename $(pwd) 사용)
+dev_session_id: optional — 재사용할 기존 세션 ID
+inline_spec:    optional — UoW 설명 (볼트 없을 때 SSOT)
+```
+
+## 실행
+
+### 1. 프로젝트 컨텍스트 파악
+
+```bash
+cat CLAUDE.md 2>/dev/null | head -80 \
+  || cat AGENTS.md 2>/dev/null | head -80 \
+  || echo "(no CLAUDE.md found)"
+git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "not-git"
+```
+
+tech_stack 감지:
+```bash
+ls pyproject.toml setup.py requirements.txt 2>/dev/null && echo "python"
+ls package.json 2>/dev/null && echo "node"
+ls go.mod 2>/dev/null && echo "go"
+ls Makefile 2>/dev/null && echo "make"
+```
+
+### 2. SSOT 수집 (우선순위)
+
+1. `inline_spec` (전달된 경우) → 즉시 사용
+2. Obsidian MCP 볼트 노트 (연결 시 시도, 실패 = 경고만)
+3. `.omc/plans/<uow_id>.md` (기존 파일)
+
+볼트 검색 실패 = 경고 로그. **블로커 아님.**
+
+### 3. devos 세션 시작
+
+```
+devos_health_check({ project_id })   # 실패해도 계속
+
+devos_start_dev_session({
+  project_id,
+  uow_id,
+  description: <SSOT 요약 100자 이내>
+})
+```
+
+devos 연결 실패 시: `dev_session_id = "local-<uow_id>"` 로컬 세션으로 계속.
+
+### 4. 프리플라이트 체크 (비블로킹)
+
+```bash
+git status --short 2>/dev/null | head -10
+```
+
+tech_stack별 베이스라인:
+```bash
+# python
+python -m pytest --co -q 2>&1 | tail -3
+
+# node
+npm test -- --listTests 2>&1 | tail -3 || true
+
+# go
+go build ./... 2>&1 | tail -3
+```
+
+실패해도 세션 시작 계속. 결과만 기록.
+
+### 5. 핸드오프 파일 작성
+
+`.omc/state/sessions/<dev_session_id>/init.md`:
+
+```markdown
+# Init: <uow_id>
+
+## SSOT
+- source: inline | vault | plan_file
+- content_summary: <요약 200자>
+
+## Project
+- id: <project_id>
+- branch: <branch>
+- tech_stack: python | node | go | other
+- test_cmd: <감지된 명령어>
+- lint_cmd: <감지된 명령어>
+
+## Preflight
+- git: clean | dirty (<N> uncommitted files)
+- tests_baseline: pass | fail | unknown
+
+## Session
+- dev_session_id: <id>
+- devos_connected: true | false
+```
+
+## 출력
+
+```json
+{
+  "status": "succeeded",
+  "dev_session_id": "<id>",
+  "project_id": "<id>",
+  "uow_id": "<uow_id>",
+  "ssot_source": "inline|vault|plan_file",
+  "tech_stack": "python|node|go|other",
+  "test_cmd": "<command>",
+  "lint_cmd": "<command>",
+  "devos_connected": true,
+  "handoff_path": ".omc/state/sessions/<id>/init.md"
+}
+```
+
+## 승인 게이트
+
+없음. 항상 자동 진행.

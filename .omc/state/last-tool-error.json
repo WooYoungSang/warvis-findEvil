@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd /home/jang/Workspace/warvis-findEvil/warvis && go test ./internal/agent -v\"}",
+  "error": "Exit code 1\n# github.com/woopsfactory/warvis/internal/agent [github.com/woopsfactory/warvis/internal/agent.test]\ninternal/agent/loop.go:54:32: cannot use currentState (variable of type hunt.State) as hunt.FSM value in argument to l.getAvailableTools: hunt.State does not implement hunt.FSM (missing method CallTool)\ninternal/agent/loop_test.go:11:6: nilMCP declared and not used\ninternal/agent/loop_test.go:12:6: nilOllama declared and not used\nFAIL\tgithub.com/woopsfactory/warvis/internal/agent [bui...",
+  "timestamp": "2026-05-03T03:44:46.989Z",
+  "retry_count": 1
+}

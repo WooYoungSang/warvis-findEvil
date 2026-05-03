@@ -1,0 +1,45 @@
+{
+  "updatedAt": "2026-05-03T03:39:05.392Z",
+  "missions": [
+    {
+      "id": "session:04db5962-bf45-4a10-86cc-f1240d3e5c16:none",
+      "source": "session",
+      "name": "none",
+      "objective": "Session mission",
+      "createdAt": "2026-05-03T03:39:05.392Z",
+      "updatedAt": "2026-05-03T03:39:05.392Z",
+      "status": "running",
+      "workerCount": 1,
+      "taskCounts": {
+        "total": 1,
+        "pending": 0,
+        "blocked": 0,
+        "inProgress": 1,
+        "completed": 0,
+        "failed": 0
+      },
+      "agents": [
+        {
+          "name": "warvis-orchestrator:aaae547",
+          "role": "warvis-orchestrator",
+          "ownership": "aaae5479512d56637",
+          "status": "running",
+          "currentStep": null,
+          "latestUpdate": null,
+          "completedSummary": null,
+          "updatedAt": "2026-05-03T03:39:05.392Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "session-start:aaae5479512d56637:2026-05-03T03:39:05.392Z",
+          "at": "2026-05-03T03:39:05.392Z",
+          "kind": "update",
+          "agent": "warvis-orchestrator:aaae547",
+          "detail": "started warvis-orchestrator:aaae547",
+          "sourceKey": "session-start:aaae5479512d56637"
+        }
+      ]
+    }
+  ]
+}

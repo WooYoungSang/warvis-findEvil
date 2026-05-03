@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 import sys
+import json
 import asyncio
 from mcp.server import Server
 from mcp.types import Tool, TextContent
@@ -313,7 +314,7 @@ def create_server() -> Server:
 
             return TextContent(
                 type="text",
-                text=str(result),
+                text=json.dumps(result),
             )
 
         except Exception as e:

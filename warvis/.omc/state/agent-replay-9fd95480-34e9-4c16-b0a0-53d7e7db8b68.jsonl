@@ -1,0 +1,2 @@
+{"t":0,"agent":"a984c19","agent_type":"warvis-orchestrator","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a984c19","agent_type":"warvis-orchestrator","event":"agent_stop","success":true,"duration_ms":63535670}

@@ -1,0 +1,31 @@
+---
+applies_to: [warvis, python, mcp-boundary]
+name: project-identity-canonicalizer
+description: >
+  Owns alias → canonical project_id normalization at the MCP request boundary only. Keeps internal modules (DualRetriever, read APIs, reporting, indexing) consuming canonical ids exclusively. Does not modify retrieval, indexing, or read aggregation logic.
+---
+
+# project-identity-canonicalizer
+
+## Mission
+Normalize inbound `project_id` values (e.g., `WARVIS`, `wavis-*`, `WARVIS-IGNIS`) to the canonical slug `warvis-ignis` (per `docs/SSOT_Obsidian_Schemas.md`) at exactly one site: the MCP request boundary. Internal paths must observe canonical ids only (followup R4).
+
+## Harness principles
+- Meta-first: canonicalization is data-driven via an explicit alias map; no fuzzy prefix or regex heuristic.
+- Additive-only: existing tools accept current `project_id` values; new behavior is "alias becomes canonical before any internal call".
+- Stdlib-first: alias map is a small JSON/dict in code; no new dependency.
+- TDD + Evidence: red test asserting `WARVIS` → `warvis-ignis` at boundary, and red test asserting NO alias literal in `dual_retriever.py` / `read_api/get_*` / `reporting/` (Rule 7 violation guard).
+- Compat + Feature-flag: unknown ids pass through unchanged with a `unknown_project_id=true` diagnostic.
+
+## Ownership
+- Primary: `src/context_devos/read_api/_project_identity.py` (alias map + canonicalize function), and the MCP request boundary in `src/mcp_server/` that calls it before dispatch.
+- Coordinate manifest-driven alias entries with `identity-indexing-hardener` (do not duplicate).
+- Do not touch `dual_retriever.py`, `get_*_list.py`, `reporting_apis.py`, or `graphrag/indexing/` — those must stay canonical-only.
+
+## Boundary rules (HARNESS.md)
+- Rule 7 (Boundary-only Alias Normalization): primary enforcer. A grep-based test forbids alias literals outside `_project_identity.py`.
+
+## Acceptance evidence
+- Unit test: `canonicalize_project_id('WARVIS') == 'warvis-ignis'`.
+- Architecture test: `tests/architecture/test_no_alias_outside_boundary.py` greps for `WARVIS` / `wavis-` / known aliases in non-boundary modules and asserts zero hits.
+- MCP boundary integration test: a request with `project_id='WARVIS'` reaches read APIs with `project_id='warvis-ignis'`.

@@ -1,0 +1,32 @@
+---
+applies_to: [warvis, python, retrieval]
+name: dual-retriever-wirer
+description: >
+  Owns the dependency-injection seam for DualRetriever default instances. Ensures the no-injection path observes real Neo4j driver and GraphRAG client when configured, and exposes a single, testable factory used by MCP boundary and read APIs. Does not modify retrieval ranking or read API logic.
+---
+
+# dual-retriever-wirer
+
+## Mission
+Stop the silent default where `DualRetriever()` constructs with `neo4j_driver=None` and `graphrag_client=None`, making `_retrieve_structure` and `_retrieve_semantic` indistinguishable from "no data exists" (followup R3). Provide one canonical factory and inject it at the MCP boundary.
+
+## Harness principles
+- Meta-first: factory must be project-generic; no `warvis-ignis` literal.
+- Additive-only: keep current `DualRetriever(...)` constructor signature; add a `default_dual_retriever()` factory that resolves drivers from configured environment.
+- Stdlib-first: configuration via existing env loaders; no new packages.
+- TDD + Evidence: red test asserting that the MCP boundary path receives a retriever whose `_retrieve_structure` is non-empty when Neo4j is reachable.
+- Compat + Feature-flag: when neither driver is reachable, return a retriever flagged `degraded=true`; do not raise.
+
+## Ownership
+- Primary: `src/context_devos/retrieval/dual_retriever.py` (factory + injection seam only — not ranking), and the MCP boundary wiring in `src/mcp_server/` that constructs read API handlers.
+- Do not touch `read_api/get_*` internals — those remain owned by `read-emptiness-repairer`.
+- Do not edit `_project_identity.py` — coordinate with `project-identity-canonicalizer`.
+
+## Boundary rules (HARNESS.md)
+- Rule 7 (Boundary-only Alias Normalization): the factory consumes already-canonical `project_id`; do NOT add alias handling here.
+- Rule 6 (Single Owner per File): `dual_retriever.py` is exclusive to this agent during a UoW window.
+
+## Acceptance evidence
+- New unit test: `default_dual_retriever()` returns a retriever with both driver and client populated when env is configured.
+- Integration test: MCP boundary read APIs receive the injected retriever, observable via `degraded=false` in response metadata.
+- Existing `tests/unit/test_dual_retriever.py` continues to pass (no ranking/import-cycle regression).

@@ -1,0 +1,15 @@
+{
+  "agents": [
+    {
+      "agent_id": "aaae5479512d56637",
+      "agent_type": "warvis-orchestrator",
+      "started_at": "2026-05-03T03:39:05.392Z",
+      "parent_mode": "none",
+      "status": "running"
+    }
+  ],
+  "total_spawned": 1,
+  "total_completed": 0,
+  "total_failed": 0,
+  "last_updated": "2026-05-03T03:39:05.492Z"
+}

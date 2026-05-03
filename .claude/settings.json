@@ -1,0 +1,77 @@
+{
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku"
+  },
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/.npmrc)",
+      "Read(**/.pypirc)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/id_rsa)",
+      "Read(**/id_ed25519)",
+      "Read(**/id_ecdsa)",
+      "Read(**/.aws/credentials)",
+      "Read(**/.ssh/**)",
+      "Read(**/.gnupg/**)",
+      "Read(./secrets/**)",
+      "Read(**/secrets/**)",
+      "Bash(rm -rf:*)",
+      "Bash(rm -r -f:*)",
+      "Bash(rm -fr:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(git clean -xfd:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(kubectl delete:*)",
+      "Bash(terraform destroy:*)",
+      "Bash(mkfs:*)",
+      "Bash(shred:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -z \"${CLAUDE_PROJECT_DIR:-}\" ]; then printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"CLAUDE_PROJECT_DIR unset \u2014 refusing to run hook from arbitrary cwd\"}}\\n'; exit 0; fi; bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pretooluse-guard.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -z \"${CLAUDE_PROJECT_DIR:-}\" ]; then printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"CLAUDE_PROJECT_DIR unset \u2014 refusing to run hook from arbitrary cwd\"}}\\n'; exit 0; fi; bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-lesson.sh\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -z \"${CLAUDE_PROJECT_DIR:-}\" ]; then printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"CLAUDE_PROJECT_DIR unset \u2014 refusing to run hook from arbitrary cwd\"}}\\n'; exit 0; fi; bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/precompact-snapshot.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
