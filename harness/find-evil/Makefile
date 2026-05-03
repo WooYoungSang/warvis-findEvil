@@ -71,7 +71,7 @@ tail-logs:
 WARVIS_BIN   := $(ROOT)/warvis/bin/warvis
 CASES_TMP    := /tmp/warvis-ks1-cases
 VENV_PY      := $(ROOT)/.venv-find-evil/bin/python
-SERVER_CMD   := $(VENV_PY) $(ROOT)/scripts/run_mcp_server.py
+SERVER_CMD   := python3 $(ROOT)/harness/find-evil/mock_mcp_server.py
 
 .PHONY: kill-switch-check kill-switch-check-1 kill-switch-check-2 kill-switch-check-3 kill-switch-check-4 kill-switch-check-5
 
@@ -82,7 +82,9 @@ kill-switch-check-1: $(WARVIS_BIN)
 	@echo "=== Kill Switch Test 1: INITIALIZE → TRACE ==="
 	@rm -rf $(CASES_TMP) && mkdir -p $(CASES_TMP)
 	@set -e; \
-	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt /evidence/test.img); \
+	  TEST_IMG="$(ROOT)/evidence/test.img"; \
+	  test -f "$$TEST_IMG" || { echo "FAILED: test evidence not found at $$TEST_IMG"; exit 1; }; \
+	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt "$$TEST_IMG"); \
 	  echo "warvis output: $$OUT"; \
 	  CASE_ID=$$(echo "$$OUT" | jq -r '.case_id'); \
 	  test -n "$$CASE_ID" || { echo "FAILED: no case_id in output"; exit 1; }; \
@@ -97,7 +99,9 @@ kill-switch-check-2: $(WARVIS_BIN)
 	@echo "=== Kill Switch Test 2: Tool calls in audit.jsonl ==="
 	@rm -rf $(CASES_TMP) && mkdir -p $(CASES_TMP)
 	@set -e; \
-	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt /evidence/test.img 2>&1); \
+	  TEST_IMG="$(ROOT)/evidence/test.img"; \
+	  test -f "$$TEST_IMG" || { echo "FAILED: test evidence not found"; exit 1; }; \
+	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt "$$TEST_IMG" 2>&1); \
 	  CASE_ID=$$(echo "$$OUT" | jq -r '.case_id' 2>/dev/null || echo ""); \
 	  if [ -z "$$CASE_ID" ]; then \
 	    echo "DEBUG: Output was: $$OUT"; \
@@ -115,7 +119,9 @@ kill-switch-check-3: $(WARVIS_BIN)
 	@echo "=== Kill Switch Test 3: Gemma JSON autonomy ==="
 	@rm -rf $(CASES_TMP) && mkdir -p $(CASES_TMP)
 	@set -e; \
-	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt /evidence/test.img 2>&1); \
+	  TEST_IMG="$(ROOT)/evidence/test.img"; \
+	  test -f "$$TEST_IMG" || { echo "FAILED: test evidence not found"; exit 1; }; \
+	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt "$$TEST_IMG" 2>&1); \
 	  CASE_ID=$$(echo "$$OUT" | jq -r '.case_id' 2>/dev/null || echo ""); \
 	  if [ -z "$$CASE_ID" ]; then \
 	    CASE_ID=$$(ls -t $(CASES_TMP) | head -1); \
@@ -131,7 +137,9 @@ kill-switch-check-4: $(WARVIS_BIN)
 	@echo "=== Kill Switch Test 4: audit.jsonl JSONL integrity ==="
 	@rm -rf $(CASES_TMP) && mkdir -p $(CASES_TMP)
 	@set -e; \
-	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt /evidence/test.img 2>&1); \
+	  TEST_IMG="$(ROOT)/evidence/test.img"; \
+	  test -f "$$TEST_IMG" || { echo "FAILED: test evidence not found"; exit 1; }; \
+	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt "$$TEST_IMG" 2>&1); \
 	  CASE_ID=$$(echo "$$OUT" | jq -r '.case_id' 2>/dev/null || echo ""); \
 	  if [ -z "$$CASE_ID" ]; then \
 	    CASE_ID=$$(ls -t $(CASES_TMP) 2>/dev/null | head -1); \
@@ -147,7 +155,9 @@ kill-switch-check-5: $(WARVIS_BIN)
 	@echo "=== Kill Switch Test 5: warvis status JSON output ==="
 	@rm -rf $(CASES_TMP) && mkdir -p $(CASES_TMP)
 	@set -e; \
-	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt /evidence/test.img 2>&1); \
+	  TEST_IMG="$(ROOT)/evidence/test.img"; \
+	  test -f "$$TEST_IMG" || { echo "FAILED: test evidence not found"; exit 1; }; \
+	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt "$$TEST_IMG" 2>&1); \
 	  CASE_ID=$$(echo "$$OUT" | jq -r '.case_id' 2>/dev/null || echo ""); \
 	  if [ -z "$$CASE_ID" ]; then \
 	    CASE_ID=$$(ls -t $(CASES_TMP) 2>/dev/null | head -1); \

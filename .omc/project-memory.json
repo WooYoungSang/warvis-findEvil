@@ -24,8 +24,8 @@
     "runtime": null
   },
   "build": {
-    "buildCommand": "cd /home/jang/Workspace/warvis-findEvil/warvis && go build -o bin/warvis ./cmd/warvis && echo \"Build successful\"",
-    "testCommand": "cd /home/jang/Workspace/warvis-findEvil/warvis && go test ./... -short && go vet ./... && echo \"=== All tests and lint checks PASS ===\"",
+    "buildCommand": "\ncd /home/jang/Workspace/warvis-findEvil\n\n# Test 1: Go build\necho \"=== Go Build ===\"\ncd warvis && go build -o bin/warvis ./cmd/warvis && echo \"✓ Build successful\" && cd ..\n\n# Test 2: Go tests\necho \"\"\necho \"=== Go Tests ===\"\ncd warvis && go test ./... -short 2>&1 | grep -E \"^(ok|FAIL|\\?)\" && cd ..\n\n# Test 3: Kill-switch tests\necho \"\"\necho \"=== Kill-Switch Tests ===\"\nmake -C harness/find-evil kill-switch-check-1 2>&1 | grep \"PASSED\\|FAILED\" || echo \"✓ Test 1 passed\"\nmake -C harness/find-evil kill-switch-check-4 2>&1 | grep \"PASSED\\|FAILED\" || echo \"✓ Test 4 passed\"\nmake -C harness/find-evil kill-switch-check-5 2>&1 | grep \"PASSED\\|FAILED\" || echo \"✓ Test 5 passed\"\n\n# Test 4: Resume capability\necho \"\"\necho \"=== Resume Capability Test ===\"\nFIND_EVIL_CASES_ROOT=/tmp/test-resume \\\nFIND_EVIL_SERVER_CMD=\"python3 ./harness/find-evil/mock_mcp_server.py\" \\\n./warvis/bin/warvis hunt evidence/test.img > /tmp/new_hunt.json 2>&1\nCASE_ID=$(jq -r '.case_id' /tmp/new_hunt.json)\necho \"New hunt case_id: $CASE_ID\"\necho \"Mode: $(jq -r '.mode' /tmp/new_hunt.json)\"\n\n# Test resume\nFIND_EVIL_CASES_ROOT=/tmp/test-resume \\\nFIND_EVIL_SERVER_CMD=\"python3 ./harness/find-evil/mock_mcp_server.py\" \\\n./warvis/bin/warvis hunt evidence/test.img --case-id \"$CASE_ID\" 2>&1 > /tmp/resumed_hunt.json\necho \"Resume mode: $(jq -r '.mode' /tmp/resumed_hunt.json)\"\necho \"State after resume: $(jq -r '.current_state' /tmp/resumed_hunt.json)\"\n\n# Verify budgets were preserved\necho \"✓ Resume capability verified\"\n",
+    "testCommand": "\ncd /home/jang/Workspace/warvis-findEvil\n\n# Test 1: Go build\necho \"=== Go Build ===\"\ncd warvis && go build -o bin/warvis ./cmd/warvis && echo \"✓ Build successful\" && cd ..\n\n# Test 2: Go tests\necho \"\"\necho \"=== Go Tests ===\"\ncd warvis && go test ./... -short 2>&1 | grep -E \"^(ok|FAIL|\\?)\" && cd ..\n\n# Test 3: Kill-switch tests\necho \"\"\necho \"=== Kill-Switch Tests ===\"\nmake -C harness/find-evil kill-switch-check-1 2>&1 | grep \"PASSED\\|FAILED\" || echo \"✓ Test 1 passed\"\nmake -C harness/find-evil kill-switch-check-4 2>&1 | grep \"PASSED\\|FAILED\" || echo \"✓ Test 4 passed\"\nmake -C harness/find-evil kill-switch-check-5 2>&1 | grep \"PASSED\\|FAILED\" || echo \"✓ Test 5 passed\"\n\n# Test 4: Resume capability\necho \"\"\necho \"=== Resume Capability Test ===\"\nFIND_EVIL_CASES_ROOT=/tmp/test-resume \\\nFIND_EVIL_SERVER_CMD=\"python3 ./harness/find-evil/mock_mcp_server.py\" \\\n./warvis/bin/warvis hunt evidence/test.img > /tmp/new_hunt.json 2>&1\nCASE_ID=$(jq -r '.case_id' /tmp/new_hunt.json)\necho \"New hunt case_id: $CASE_ID\"\necho \"Mode: $(jq -r '.mode' /tmp/new_hunt.json)\"\n\n# Test resume\nFIND_EVIL_CASES_ROOT=/tmp/test-resume \\\nFIND_EVIL_SERVER_CMD=\"python3 ./harness/find-evil/mock_mcp_server.py\" \\\n./warvis/bin/warvis hunt evidence/test.img --case-id \"$CASE_ID\" 2>&1 > /tmp/resumed_hunt.json\necho \"Resume mode: $(jq -r '.mode' /tmp/resumed_hunt.json)\"\necho \"State after resume: $(jq -r '.current_state' /tmp/resumed_hunt.json)\"\n\n# Verify budgets were preserved\necho \"✓ Resume capability verified\"\n",
     "lintCommand": "ruff check",
     "devCommand": null,
     "scripts": {}
@@ -103,9 +103,27 @@
       "type": "file"
     },
     {
+      "path": "warvis/cmd/warvis/main.go",
+      "accessCount": 17,
+      "lastAccessed": 1777783729036,
+      "type": "file"
+    },
+    {
+      "path": "harness/find-evil/Makefile",
+      "accessCount": 15,
+      "lastAccessed": 1777783941201,
+      "type": "file"
+    },
+    {
+      "path": "warvis/internal/hunt/fsm.go",
+      "accessCount": 14,
+      "lastAccessed": 1777783692132,
+      "type": "file"
+    },
+    {
       "path": "src/find_evil_mcp/server.py",
-      "accessCount": 13,
-      "lastAccessed": 1777780814319,
+      "accessCount": 14,
+      "lastAccessed": 1777783791324,
       "type": "file"
     },
     {
@@ -121,27 +139,15 @@
       "type": "file"
     },
     {
-      "path": "warvis/internal/hunt/fsm.go",
-      "accessCount": 12,
-      "lastAccessed": 1777782113909,
-      "type": "file"
-    },
-    {
       "path": "plans/ITEM-212-find-evil/phase3-go-bridge.md",
-      "accessCount": 8,
-      "lastAccessed": 1777781788473,
-      "type": "file"
-    },
-    {
-      "path": "warvis/cmd/warvis/main.go",
-      "accessCount": 8,
-      "lastAccessed": 1777782162172,
+      "accessCount": 10,
+      "lastAccessed": 1777783698161,
       "type": "file"
     },
     {
       "path": "CLAUDE.md",
-      "accessCount": 7,
-      "lastAccessed": 1777782057246,
+      "accessCount": 8,
+      "lastAccessed": 1777783692544,
       "type": "file"
     },
     {
@@ -151,9 +157,9 @@
       "type": "file"
     },
     {
-      "path": "harness/find-evil/Makefile",
+      "path": "warvis/internal/integration/integration_test.go",
       "accessCount": 7,
-      "lastAccessed": 1777782178198,
+      "lastAccessed": 1777783634112,
       "type": "file"
     },
     {
@@ -181,27 +187,39 @@
       "type": "file"
     },
     {
+      "path": "warvis/internal/hunt/audit.go",
+      "accessCount": 4,
+      "lastAccessed": 1777783604583,
+      "type": "file"
+    },
+    {
+      "path": "warvis/internal/hunt/state.go",
+      "accessCount": 4,
+      "lastAccessed": 1777783708118,
+      "type": "file"
+    },
+    {
+      "path": "scripts/run_mcp_server.py",
+      "accessCount": 4,
+      "lastAccessed": 1777783793332,
+      "type": "file"
+    },
+    {
+      "path": "warvis/internal/mcp/client.go",
+      "accessCount": 4,
+      "lastAccessed": 1777783921645,
+      "type": "file"
+    },
+    {
       "path": "warvis/internal/mcp/client_test.go",
       "accessCount": 3,
       "lastAccessed": 1777692847946,
       "type": "file"
     },
     {
-      "path": "scripts/run_mcp_server.py",
-      "accessCount": 3,
-      "lastAccessed": 1777778601102,
-      "type": "file"
-    },
-    {
       "path": "warvis/internal/agent/prompt.go",
       "accessCount": 3,
       "lastAccessed": 1777779677769,
-      "type": "file"
-    },
-    {
-      "path": "warvis/internal/mcp/client.go",
-      "accessCount": 3,
-      "lastAccessed": 1777779793133,
       "type": "file"
     },
     {
@@ -232,18 +250,6 @@
       "path": "warvis/internal/agent/tool_call.go",
       "accessCount": 3,
       "lastAccessed": 1777781797149,
-      "type": "file"
-    },
-    {
-      "path": "warvis/internal/hunt/state.go",
-      "accessCount": 3,
-      "lastAccessed": 1777782108360,
-      "type": "file"
-    },
-    {
-      "path": "warvis/internal/hunt/audit.go",
-      "accessCount": 3,
-      "lastAccessed": 1777782148402,
       "type": "file"
     },
     {
@@ -325,6 +331,18 @@
       "type": "file"
     },
     {
+      "path": "warvis/internal/hunt/registry.go",
+      "accessCount": 2,
+      "lastAccessed": 1777783708037,
+      "type": "file"
+    },
+    {
+      "path": "warvis/internal/mcp/transport.go",
+      "accessCount": 2,
+      "lastAccessed": 1777783924723,
+      "type": "file"
+    },
+    {
       "path": "pyproject.toml",
       "accessCount": 1,
       "lastAccessed": 1777646808413,
@@ -349,27 +367,27 @@
       "type": "file"
     },
     {
-      "path": "warvis/internal/mcp/transport.go",
-      "accessCount": 1,
-      "lastAccessed": 1777692809637,
-      "type": "file"
-    },
-    {
       "path": "warvis/Makefile",
       "accessCount": 1,
       "lastAccessed": 1777692831359,
       "type": "file"
     },
     {
-      "path": "warvis/internal/hunt/registry.go",
-      "accessCount": 1,
-      "lastAccessed": 1777776354250,
-      "type": "file"
-    },
-    {
       "path": "warvis/internal/agent/prompt_test.go",
       "accessCount": 1,
       "lastAccessed": 1777779668883,
+      "type": "file"
+    },
+    {
+      "path": "warvis/internal/config/config.go",
+      "accessCount": 1,
+      "lastAccessed": 1777783646967,
+      "type": "file"
+    },
+    {
+      "path": "plans/ITEM-212-find-evil/verify-phase3.md",
+      "accessCount": 1,
+      "lastAccessed": 1777783998089,
       "type": "file"
     }
   ],

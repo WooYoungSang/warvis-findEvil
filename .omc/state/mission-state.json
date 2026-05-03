@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-03T04:20:54.115Z",
+  "updatedAt": "2026-05-03T04:48:10.448Z",
   "missions": [
     {
       "id": "session:04db5962-bf45-4a10-86cc-f1240d3e5c16:none",
@@ -7,15 +7,15 @@
       "name": "none",
       "objective": "Session mission",
       "createdAt": "2026-05-03T03:39:05.392Z",
-      "updatedAt": "2026-05-03T04:20:54.115Z",
+      "updatedAt": "2026-05-03T04:48:10.448Z",
       "status": "running",
-      "workerCount": 5,
+      "workerCount": 7,
       "taskCounts": {
-        "total": 5,
+        "total": 7,
         "pending": 0,
         "blocked": 0,
         "inProgress": 1,
-        "completed": 4,
+        "completed": 6,
         "failed": 0
       },
       "agents": [
@@ -63,37 +63,57 @@
           "name": "warvis-orchestrator:ace0d7e",
           "role": "warvis-orchestrator",
           "ownership": "ace0d7e493ee05415",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-05-03T04:24:54.117Z"
+        },
+        {
+          "name": "warvis-orchestrator:af1f6a6",
+          "role": "warvis-orchestrator",
+          "ownership": "af1f6a63ad1ea1b04",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-05-03T04:48:04.387Z"
+        },
+        {
+          "name": "general-purpose:a96047d",
+          "role": "general-purpose",
+          "ownership": "a96047d41a0ab75f9",
           "status": "running",
           "currentStep": null,
           "latestUpdate": null,
           "completedSummary": null,
-          "updatedAt": "2026-05-03T04:20:54.115Z"
+          "updatedAt": "2026-05-03T04:48:10.448Z"
         }
       ],
       "timeline": [
         {
-          "id": "session-start:a3fd0a451b9a3e5f6:2026-05-03T04:16:21.017Z",
-          "at": "2026-05-03T04:16:21.017Z",
+          "id": "session-start:af1f6a63ad1ea1b04:2026-05-03T04:45:26.744Z",
+          "at": "2026-05-03T04:45:26.744Z",
           "kind": "update",
-          "agent": "general-purpose:a3fd0a4",
-          "detail": "started general-purpose:a3fd0a4",
-          "sourceKey": "session-start:a3fd0a451b9a3e5f6"
+          "agent": "warvis-orchestrator:af1f6a6",
+          "detail": "started warvis-orchestrator:af1f6a6",
+          "sourceKey": "session-start:af1f6a63ad1ea1b04"
         },
         {
-          "id": "session-stop:a3fd0a451b9a3e5f6:2026-05-03T04:19:56.156Z",
-          "at": "2026-05-03T04:19:56.156Z",
+          "id": "session-stop:af1f6a63ad1ea1b04:2026-05-03T04:48:04.387Z",
+          "at": "2026-05-03T04:48:04.387Z",
           "kind": "completion",
-          "agent": "general-purpose:a3fd0a4",
+          "agent": "warvis-orchestrator:af1f6a6",
           "detail": "completed",
-          "sourceKey": "session-stop:a3fd0a451b9a3e5f6"
+          "sourceKey": "session-stop:af1f6a63ad1ea1b04"
         },
         {
-          "id": "session-start:ace0d7e493ee05415:2026-05-03T04:20:54.115Z",
-          "at": "2026-05-03T04:20:54.115Z",
+          "id": "session-start:a96047d41a0ab75f9:2026-05-03T04:48:10.448Z",
+          "at": "2026-05-03T04:48:10.448Z",
           "kind": "update",
-          "agent": "warvis-orchestrator:ace0d7e",
-          "detail": "started warvis-orchestrator:ace0d7e",
-          "sourceKey": "session-start:ace0d7e493ee05415"
+          "agent": "general-purpose:a96047d",
+          "detail": "started general-purpose:a96047d",
+          "sourceKey": "session-start:a96047d41a0ab75f9"
         }
       ]
     }

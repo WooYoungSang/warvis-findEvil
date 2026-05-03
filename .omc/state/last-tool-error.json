@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"git add warvis/internal/hunt/fsm.go warvis/internal/hunt/fsm_test.go warvis/internal/agent/loop_test.go harness/find-evil/Makefile && git commit -m \\\"$(cat <<'EOF'\\nfeat: implement M5a-M5d...",
-  "error": "Exit code 2\n/bin/bash: eval: line 39: unexpected EOF while looking for matching `\"'\n/bin/bash: eval: line 78: syntax error: unexpected end of file",
-  "timestamp": "2026-05-03T04:18:38.326Z",
-  "retry_count": 1
+  "tool_input_preview": "{\"command\":\"\\ncd /home/jang/Workspace/warvis-findEvil\\nFIND_EVIL_CASES_ROOT=/tmp/test-cases \\\\\\nFIND_EVIL_SERVER_CMD=\\\"python3 /tmp/mock_mcp_server.py\\\" \\\\\\ntimeout 10 ./warvis/bin/warvis hunt evidenc...",
+  "error": "Exit code 124",
+  "timestamp": "2026-05-03T04:51:59.678Z",
+  "retry_count": 2
 }

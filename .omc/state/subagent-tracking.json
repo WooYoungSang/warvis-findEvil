@@ -41,11 +41,29 @@
       "agent_type": "warvis-orchestrator",
       "started_at": "2026-05-03T04:20:54.115Z",
       "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-03T04:24:54.117Z",
+      "duration_ms": 240002
+    },
+    {
+      "agent_id": "af1f6a63ad1ea1b04",
+      "agent_type": "warvis-orchestrator",
+      "started_at": "2026-05-03T04:45:26.744Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-03T04:48:04.387Z",
+      "duration_ms": 157643
+    },
+    {
+      "agent_id": "a96047d41a0ab75f9",
+      "agent_type": "general-purpose",
+      "started_at": "2026-05-03T04:48:10.448Z",
+      "parent_mode": "none",
       "status": "running"
     }
   ],
-  "total_spawned": 5,
-  "total_completed": 4,
+  "total_spawned": 7,
+  "total_completed": 6,
   "total_failed": 0,
-  "last_updated": "2026-05-03T04:20:54.217Z"
+  "last_updated": "2026-05-03T04:48:10.550Z"
 }
