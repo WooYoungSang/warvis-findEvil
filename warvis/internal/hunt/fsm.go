@@ -322,3 +322,49 @@ func (f *HuntFSM) SetCurrentState(state State) {
 	defer f.mu.Unlock()
 	f.currentState = state
 }
+
+// IncrementLLMTurns increments the LLM turn counter.
+// Returns true if budget exceeded, false otherwise.
+func (f *HuntFSM) IncrementLLMTurns() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	f.budgets.CurrentLLMTurns++
+	if f.budgets.CurrentLLMTurns > f.budgets.MaxLLMTurns {
+		if f.auditLog != nil {
+			_ = f.auditLog.Append(map[string]interface{}{
+				"timestamp":        time.Now().UTC().Format(time.RFC3339),
+				"event":            "budget_exceeded",
+				"budget_type":      "llm_turns",
+				"current":          f.budgets.CurrentLLMTurns,
+				"max":              f.budgets.MaxLLMTurns,
+				"state":            f.currentState.Name(),
+			})
+		}
+		return true
+	}
+	return false
+}
+
+// IncrementInvalidJSONAttempts increments the invalid JSON counter.
+// Returns true if budget exceeded, false otherwise.
+func (f *HuntFSM) IncrementInvalidJSONAttempts() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	f.budgets.CurrentInvalidJSONAttempts++
+	if f.budgets.CurrentInvalidJSONAttempts > f.budgets.MaxInvalidJSONAttempts {
+		if f.auditLog != nil {
+			_ = f.auditLog.Append(map[string]interface{}{
+				"timestamp":        time.Now().UTC().Format(time.RFC3339),
+				"event":            "budget_exceeded",
+				"budget_type":      "invalid_json_attempts",
+				"current":          f.budgets.CurrentInvalidJSONAttempts,
+				"max":              f.budgets.MaxInvalidJSONAttempts,
+				"state":            f.currentState.Name(),
+			})
+		}
+		return true
+	}
+	return false
+}

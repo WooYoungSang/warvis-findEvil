@@ -73,7 +73,7 @@ CASES_TMP    := /tmp/warvis-ks1-cases
 VENV_PY      := $(ROOT)/.venv-find-evil/bin/python
 SERVER_CMD   := $(VENV_PY) $(ROOT)/scripts/run_mcp_server.py
 
-.PHONY: kill-switch-check kill-switch-check-1
+.PHONY: kill-switch-check kill-switch-check-1 kill-switch-check-2 kill-switch-check-3
 
 $(WARVIS_BIN):
 	@cd $(ROOT)/warvis && go build -o bin/warvis ./cmd/warvis
@@ -93,5 +93,39 @@ kill-switch-check-1: $(WARVIS_BIN)
 	  jq . $(CASES_TMP)/$$CASE_ID/audit.jsonl > /dev/null || { echo "FAILED: audit.jsonl not valid JSONL"; exit 1; }; \
 	  echo "PASSED: case_id=$$CASE_ID, state=TRACE, audit_lines=$$LINES"
 
-kill-switch-check: kill-switch-check-1
-	@echo "All kill-switch tests PASSED"
+kill-switch-check-2: $(WARVIS_BIN)
+	@echo "=== Kill Switch Test 2: Tool calls in audit.jsonl ==="
+	@rm -rf $(CASES_TMP) && mkdir -p $(CASES_TMP)
+	@set -e; \
+	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt /evidence/test.img 2>&1); \
+	  CASE_ID=$$(echo "$$OUT" | jq -r '.case_id' 2>/dev/null || echo ""); \
+	  if [ -z "$$CASE_ID" ]; then \
+	    echo "DEBUG: Output was: $$OUT"; \
+	    CASE_ID=$$(ls -t $(CASES_TMP) | head -1); \
+	    test -n "$$CASE_ID" || { echo "FAILED: no case directory found"; exit 1; }; \
+	  fi; \
+	  test -f $(CASES_TMP)/$$CASE_ID/audit.jsonl || { echo "FAILED: audit.jsonl not found for case $$CASE_ID"; exit 1; }; \
+	  TOOL_CALLS=$$(grep -c '"event":"tool_called"' $(CASES_TMP)/$$CASE_ID/audit.jsonl || echo "0"); \
+	  TOOL_RESULTS=$$(grep -c '"event":"tool_result"' $(CASES_TMP)/$$CASE_ID/audit.jsonl || echo "0"); \
+	  test "$$TOOL_CALLS" -gt 0 || { echo "FAILED: no tool_called events (got $$TOOL_CALLS)"; exit 1; }; \
+	  test "$$TOOL_RESULTS" -gt 0 || { echo "FAILED: no tool_result events (got $$TOOL_RESULTS)"; exit 1; }; \
+	  echo "PASSED: tool_calls=$$TOOL_CALLS, tool_results=$$TOOL_RESULTS"
+
+kill-switch-check-3: $(WARVIS_BIN)
+	@echo "=== Kill Switch Test 3: Gemma JSON autonomy ==="
+	@rm -rf $(CASES_TMP) && mkdir -p $(CASES_TMP)
+	@set -e; \
+	  OUT=$$(FIND_EVIL_CASES_ROOT=$(CASES_TMP) FIND_EVIL_SERVER_CMD="$(SERVER_CMD)" $(WARVIS_BIN) hunt /evidence/test.img 2>&1); \
+	  CASE_ID=$$(echo "$$OUT" | jq -r '.case_id' 2>/dev/null || echo ""); \
+	  if [ -z "$$CASE_ID" ]; then \
+	    CASE_ID=$$(ls -t $(CASES_TMP) | head -1); \
+	    test -n "$$CASE_ID" || { echo "FAILED: no case directory"; exit 1; }; \
+	  fi; \
+	  TOOL_CALLS=$$(grep -c '"event":"tool_called"' $(CASES_TMP)/$$CASE_ID/audit.jsonl 2>/dev/null || echo "0"); \
+	  test "$$TOOL_CALLS" -ge 2 || { echo "FAILED: only $$TOOL_CALLS tool calls (want >=2)"; exit 1; }; \
+	  GEMMA_RESPONSES=$$(grep -c '"event":"gemma_response"' $(CASES_TMP)/$$CASE_ID/audit.jsonl 2>/dev/null || echo "0"); \
+	  test "$$GEMMA_RESPONSES" -gt 0 || { echo "FAILED: no gemma_response events"; exit 1; }; \
+	  echo "PASSED: tool_calls=$$TOOL_CALLS, gemma_responses=$$GEMMA_RESPONSES"
+
+kill-switch-check: kill-switch-check-1 kill-switch-check-2 kill-switch-check-3
+	@echo "✓ All 3 kill-switch tests PASSED"
