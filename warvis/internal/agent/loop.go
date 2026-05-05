@@ -15,6 +15,7 @@ type Loop struct {
 	fsm              hunt.FSM
 	mcpClient        *mcp.Client
 	ollamaClient     *ollama.Client
+	auditLog         *hunt.AuditLog
 	conversationHist []ConversationTurn
 	maxHistorySize   int
 	maxToolOutputLen int
@@ -22,11 +23,12 @@ type Loop struct {
 }
 
 // NewLoop creates a new agent loop.
-func NewLoop(fsm hunt.FSM, mcpClient *mcp.Client, ollamaClient *ollama.Client) *Loop {
+func NewLoop(fsm hunt.FSM, mcpClient *mcp.Client, ollamaClient *ollama.Client, auditLog *hunt.AuditLog) *Loop {
 	return &Loop{
 		fsm:              fsm,
 		mcpClient:        mcpClient,
 		ollamaClient:     ollamaClient,
+		auditLog:         auditLog,
 		conversationHist: []ConversationTurn{},
 		maxHistorySize:   20, // Max 20 exchanges
 		maxToolOutputLen: 500, // Truncate tool outputs to 500 chars
@@ -104,6 +106,21 @@ func (l *Loop) callOllama(ctx context.Context, messages []ollama.Message) (*Acti
 
 	// Parse the assistant's response into an Action
 	action := ParseAction(resp.Message.Content)
+
+	// Log gemma_response audit event (non-blocking)
+	if l.auditLog != nil {
+		truncated := resp.Message.Content
+		if len(truncated) > 200 {
+			truncated = truncated[:200]
+		}
+		_ = l.auditLog.Append(map[string]interface{}{
+			"timestamp":    time.Now().UTC().Format(time.RFC3339),
+			"event":        "gemma_response",
+			"gemma_output": truncated,
+			"action_type":  action.Type,
+		})
+	}
+
 	return action, nil
 }
 
@@ -116,8 +133,30 @@ func (l *Loop) callTool(ctx context.Context, action *Action) error {
 		return fmt.Errorf(msg)
 	}
 
+	// Log tool_called event before invocation
+	if l.auditLog != nil {
+		_ = l.auditLog.Append(map[string]interface{}{
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"event":     "tool_called",
+			"tool_name": action.ToolName,
+			"arguments": action.Arguments,
+		})
+	}
+
 	// Call the tool via MCP (no context parameter)
 	result, err := l.mcpClient.CallTool(action.ToolName, action.Arguments)
+
+	// Log tool_result event after invocation (regardless of success/failure)
+	if l.auditLog != nil {
+		success := err == nil
+		_ = l.auditLog.Append(map[string]interface{}{
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"event":     "tool_result",
+			"tool_name": action.ToolName,
+			"success":   success,
+		})
+	}
+
 	if err != nil {
 		msg := fmt.Sprintf("Tool call failed: %v", err)
 		l.addToHistory("system", msg, nil)

@@ -9,9 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/woopsfactory/warvis/internal/agent"
 	"github.com/woopsfactory/warvis/internal/config"
 	"github.com/woopsfactory/warvis/internal/hunt"
 	"github.com/woopsfactory/warvis/internal/mcp"
+	"github.com/woopsfactory/warvis/pkg/ollama"
 )
 
 // serverCmd returns the command to spawn the MCP server.
@@ -206,6 +208,39 @@ func runHunt(args []string) error {
 
 	if err := registry.Save(newCaseID, fsm.CurrentState(), fsm.GetBudgetStatus()); err != nil {
 		return fmt.Errorf("failed to save state: %w", err)
+	}
+
+	// Initialize Ollama client
+	ollamaURL := os.Getenv("OLLAMA_URL")
+	if ollamaURL == "" {
+		ollamaURL = "http://localhost:29134"
+	}
+	ollamaModel := os.Getenv("OLLAMA_MODEL")
+	if ollamaModel == "" {
+		ollamaModel = "gemma4:26b-a4b-it-q4_K_M"
+	}
+
+	ollamaClient := ollama.NewClient(ollamaURL, ollamaModel)
+
+	// Create and run agent loop
+	loop := agent.NewLoop(fsm, mcpClient, ollamaClient, auditLog)
+	if err := loop.Run(ctx); err != nil {
+		// Log error but don't fail the hunt
+		fmt.Printf("[Agent] Loop exited with error: %v\n", err)
+		if err := auditLog.Append(map[string]interface{}{
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"event":     "loop_error",
+			"error":     err.Error(),
+		}); err != nil {
+			fmt.Printf("[Audit] Failed to log loop error: %v\n", err)
+		}
+	} else {
+		if err := auditLog.Append(map[string]interface{}{
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"event":     "loop_completed",
+		}); err != nil {
+			fmt.Printf("[Audit] Failed to log loop completion: %v\n", err)
+		}
 	}
 
 	out, _ := json.Marshal(map[string]string{

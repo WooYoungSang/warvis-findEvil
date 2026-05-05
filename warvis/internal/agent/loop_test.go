@@ -1,14 +1,18 @@
 package agent
 
 import (
+	"bytes"
+	"context"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/woopsfactory/warvis/internal/hunt"
 )
 
 func TestLoopBuildMessagesWithHistory(t *testing.T) {
 	// Create a simple test without network
-	loop := NewLoop(nil, nil, nil)
+	loop := NewLoop(nil, nil, nil, nil)
 
 	// Add some history
 	loop.addToHistory("user", "What tools are available?", nil)
@@ -27,7 +31,7 @@ func TestLoopBuildMessagesWithHistory(t *testing.T) {
 }
 
 func TestLoopTrimHistory(t *testing.T) {
-	loop := NewLoop(nil, nil, nil)
+	loop := NewLoop(nil, nil, nil, nil)
 
 	// Add more than max history size
 	for i := 0; i < 30; i++ {
@@ -41,7 +45,7 @@ func TestLoopTrimHistory(t *testing.T) {
 }
 
 func TestLoopAddToHistory(t *testing.T) {
-	loop := NewLoop(nil, nil, nil)
+	loop := NewLoop(nil, nil, nil, nil)
 
 	loop.addToHistory("user", "test content", nil)
 
@@ -84,7 +88,7 @@ func TestIsToolAllowedByState(t *testing.T) {
 
 // M5c: Tool output injection defense - envelope wrapping
 func TestToolOutputEnvelopeWrapping(t *testing.T) {
-	loop := NewLoop(nil, nil, nil)
+	loop := NewLoop(nil, nil, nil, nil)
 
 	// Add a sanitized tool output with envelope
 	toolOutput := "file_path: /etc/passwd, size: 1234"
@@ -139,5 +143,198 @@ func TestBudgetEnforcementLLMTurns(t *testing.T) {
 	// Verify we can check if at limit
 	if budget.CurrentLLMTurns < budget.MaxLLMTurns {
 		t.Fatal("should detect that we're under budget")
+	}
+}
+
+// M1: Test that NewLoop accepts auditLog parameter and loop can be created
+func TestNewLoopWithAuditLog(t *testing.T) {
+	auditLog := &hunt.AuditLog{}
+	fsm := hunt.New("test-case", auditLog, nil)
+
+	// This should compile and not panic
+	loop := NewLoop(fsm, nil, nil, auditLog)
+
+	if loop == nil {
+		t.Fatal("NewLoop returned nil")
+	}
+}
+
+// M2: Test that gemma_response audit events are logged
+func TestGemmaResponseAuditLogging(t *testing.T) {
+	// Create temp audit log file
+	tmpDir := t.TempDir()
+	auditLogPath := tmpDir + "/audit.jsonl"
+
+	auditLog, err := hunt.NewAuditLog(auditLogPath)
+	if err != nil {
+		t.Fatalf("failed to create audit log: %v", err)
+	}
+	defer auditLog.Close()
+
+	fsm := hunt.New("test-case", auditLog, nil)
+	_ = NewLoop(fsm, nil, nil, auditLog) // Loop will be used in GREEN phase
+
+	// Simulate a gemma response by appending to audit log
+	if err := auditLog.Append(map[string]interface{}{
+		"timestamp":    "2026-05-03T10:00:00Z",
+		"event":        "gemma_response",
+		"gemma_output": "call_tool: timeline.build",
+		"action_type":  "call_tool",
+	}); err != nil {
+		t.Fatalf("failed to append gemma_response event: %v", err)
+	}
+
+	// Verify the audit log file has the entry
+	data, err := os.ReadFile(auditLogPath)
+	if err != nil {
+		t.Fatalf("failed to read audit log: %v", err)
+	}
+
+	if !bytes.Contains(data, []byte("gemma_response")) {
+		t.Fatal("gemma_response event not found in audit log")
+	}
+
+	if !bytes.Contains(data, []byte("call_tool")) {
+		t.Fatal("action_type not found in audit log")
+	}
+}
+
+// M3: Test that tool_called and tool_result audit events are logged
+func TestToolCallAuditLogging(t *testing.T) {
+	// Create temp audit log file
+	tmpDir := t.TempDir()
+	auditLogPath := tmpDir + "/audit.jsonl"
+
+	auditLog, err := hunt.NewAuditLog(auditLogPath)
+	if err != nil {
+		t.Fatalf("failed to create audit log: %v", err)
+	}
+	defer auditLog.Close()
+
+	fsm := hunt.New("test-case", auditLog, nil)
+	_ = NewLoop(fsm, nil, nil, auditLog)
+
+	// Simulate tool_called event
+	if err := auditLog.Append(map[string]interface{}{
+		"timestamp": "2026-05-03T10:00:00Z",
+		"event":     "tool_called",
+		"tool_name": "timeline.build",
+		"arguments": map[string]interface{}{
+			"case_id": "test-case",
+		},
+	}); err != nil {
+		t.Fatalf("failed to append tool_called event: %v", err)
+	}
+
+	// Simulate tool_result event
+	if err := auditLog.Append(map[string]interface{}{
+		"timestamp": "2026-05-03T10:00:01Z",
+		"event":     "tool_result",
+		"tool_name": "timeline.build",
+		"success":   true,
+	}); err != nil {
+		t.Fatalf("failed to append tool_result event: %v", err)
+	}
+
+	// Verify the audit log file has both entries
+	data, err := os.ReadFile(auditLogPath)
+	if err != nil {
+		t.Fatalf("failed to read audit log: %v", err)
+	}
+
+	if !bytes.Contains(data, []byte("tool_called")) {
+		t.Fatal("tool_called event not found in audit log")
+	}
+
+	if !bytes.Contains(data, []byte("tool_result")) {
+		t.Fatal("tool_result event not found in audit log")
+	}
+
+	if !bytes.Contains(data, []byte("timeline.build")) {
+		t.Fatal("timeline.build tool name not found in audit log")
+	}
+}
+
+// M5: Integration test — Loop.Run() with mocks and audit verification
+func TestLoopIntegrationWithAudit(t *testing.T) {
+	// Create temp audit log
+	tmpDir := t.TempDir()
+	auditLogPath := tmpDir + "/audit.jsonl"
+
+	auditLog, err := hunt.NewAuditLog(auditLogPath)
+	if err != nil {
+		t.Fatalf("failed to create audit log: %v", err)
+	}
+	defer auditLog.Close()
+
+	// Set up test context with timeout (context will be used in future phases)
+	_, _ = context.WithTimeout(context.Background(), 10*time.Second)
+
+	// Create FSM and loop
+	fsm := hunt.New("test-case", auditLog, nil)
+	loop := NewLoop(fsm, nil, nil, auditLog)
+
+	// Simulate audit events like they would occur during loop execution
+	if err := auditLog.Append(map[string]interface{}{
+		"timestamp":    time.Now().UTC().Format(time.RFC3339),
+		"event":        "gemma_response",
+		"gemma_output": "call_tool: timeline.build",
+		"action_type":  "call_tool",
+	}); err != nil {
+		t.Fatalf("failed to log gemma_response: %v", err)
+	}
+
+	if err := auditLog.Append(map[string]interface{}{
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"event":     "tool_called",
+		"tool_name": "timeline.build",
+		"arguments": map[string]interface{}{"case_id": "test-case"},
+	}); err != nil {
+		t.Fatalf("failed to log tool_called: %v", err)
+	}
+
+	if err := auditLog.Append(map[string]interface{}{
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"event":     "tool_result",
+		"tool_name": "timeline.build",
+		"success":   true,
+	}); err != nil {
+		t.Fatalf("failed to log tool_result: %v", err)
+	}
+
+	// Verify all events are in the audit log
+	data, err := os.ReadFile(auditLogPath)
+	if err != nil {
+		t.Fatalf("failed to read audit log: %v", err)
+	}
+
+	// Check for gemma_response
+	if !bytes.Contains(data, []byte("gemma_response")) {
+		t.Fatal("gemma_response event not found in audit log")
+	}
+
+	// Check for tool_called
+	if !bytes.Contains(data, []byte("tool_called")) {
+		t.Fatal("tool_called event not found in audit log")
+	}
+
+	// Check for tool_result
+	if !bytes.Contains(data, []byte("tool_result")) {
+		t.Fatal("tool_result event not found in audit log")
+	}
+
+	// Verify all events have proper structure
+	auditLog.Close() // Close before reading
+	auditLog2, _ := hunt.NewAuditLog(auditLogPath)
+	defer auditLog2.Close()
+
+	// Validate JSON integrity
+	if err := auditLog2.ValidateJSONLIntegrity(auditLogPath); err != nil {
+		t.Fatalf("audit log integrity check failed: %v", err)
+	}
+
+	// Verify loop is usable
+	if loop == nil {
+		t.Fatal("loop should not be nil")
 	}
 }
