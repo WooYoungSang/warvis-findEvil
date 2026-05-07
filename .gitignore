@@ -10,3 +10,14 @@ harness/find-evil/logs/
 .env
 .env.*
 !env.sample
+
+# OMC / devos runtime cache (machine-local, not source-of-truth)
+.omc/state/
+.omc/sessions/
+.omc/project-memory.json
+warvis/.omc/state/
+warvis/.omc/sessions/
+warvis/.omc/project-memory.json
+# But keep plans (canonical UoW specs) and notepad
+!.omc/plans/
+!warvis/.omc/plans/
