@@ -39,6 +39,10 @@ type FSM interface {
 	Resume() error
 	// GetBudgetStatus returns current resource consumption.
 	GetBudgetStatus() BudgetStatus
+	// SetBudgets overrides the current budget values (e.g. for testing).
+	SetBudgets(budgets BudgetStatus)
+	// IncrementLLMTurns increments the LLM turn counter and returns true if the budget is exceeded.
+	IncrementLLMTurns() bool
 }
 
 // HuntFSM is the concrete implementation of FSM.

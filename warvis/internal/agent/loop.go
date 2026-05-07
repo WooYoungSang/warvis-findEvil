@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/woopsfactory/warvis/internal/hunt"
@@ -42,7 +43,7 @@ func (l *Loop) Run(ctx context.Context) error {
 	stateCtx, cancel := context.WithTimeout(ctx, l.stateTimeout)
 	defer cancel()
 
-	fmt.Printf("[Agent] Entered state\n")
+	fmt.Fprintf(os.Stderr, "[Agent] Entered state\n")
 
 	for {
 		select {
@@ -58,6 +59,12 @@ func (l *Loop) Run(ctx context.Context) error {
 
 		// Prepare messages for Ollama (system + conversation history)
 		messages := l.buildMessages(systemPrompt)
+
+		// Enforce LLM turn budget before calling Ollama
+		if l.fsm.IncrementLLMTurns() {
+			fmt.Fprintf(os.Stderr, "[Agent] LLM turn budget exceeded, exiting state\n")
+			return nil
+		}
 
 		// Call Ollama to get action
 		action, err := l.callOllama(stateCtx, messages)
@@ -76,22 +83,22 @@ func (l *Loop) Run(ctx context.Context) error {
 		case "call_tool":
 			err := l.callTool(stateCtx, action)
 			if err != nil {
-				fmt.Printf("[Agent] Tool call failed: %v\n", err)
+				fmt.Fprintf(os.Stderr, "[Agent] Tool call failed: %v\n", err)
 				// Add error to history for next iteration
 				l.addToHistory("system", fmt.Sprintf("Tool call failed: %v", err), nil)
 				continue
 			}
 
 		case "state_complete":
-			fmt.Printf("[Agent] State complete, transitioning...\n")
+			fmt.Fprintf(os.Stderr, "[Agent] State complete, transitioning...\n")
 			return nil
 
 		case "escalate":
-			fmt.Printf("[Agent] Escalating: %s\n", action.Reason)
+			fmt.Fprintf(os.Stderr, "[Agent] Escalating: %s\n", action.Reason)
 			return fmt.Errorf("escalated: %s", action.Reason)
 
 		default:
-			fmt.Printf("[Agent] Unknown action type: %s\n", action.Type)
+			fmt.Fprintf(os.Stderr, "[Agent] Unknown action type: %s\n", action.Type)
 			l.addToHistory("system", fmt.Sprintf("Unknown action type: %s", action.Type), nil)
 		}
 	}
@@ -179,7 +186,7 @@ func (l *Loop) callTool(ctx context.Context, action *Action) error {
 		"success": true,
 	})
 
-	fmt.Printf("[Agent] Tool %s called successfully\n", action.ToolName)
+	fmt.Fprintf(os.Stderr, "[Agent] Tool %s called successfully\n", action.ToolName)
 	return nil
 }
 

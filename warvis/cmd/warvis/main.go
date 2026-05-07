@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -222,24 +223,33 @@ func runHunt(args []string) error {
 
 	ollamaClient := ollama.NewClient(ollamaURL, ollamaModel)
 
+	// Override LLM turn budget from env var (e.g. WARVIS_MAX_TURNS=3 for kill-switch tests)
+	if maxTurnsStr := os.Getenv("WARVIS_MAX_TURNS"); maxTurnsStr != "" {
+		if n, err := strconv.Atoi(maxTurnsStr); err == nil && n >= 0 {
+			budgets := fsm.GetBudgetStatus()
+			budgets.MaxLLMTurns = n
+			fsm.SetBudgets(budgets)
+		}
+	}
+
 	// Create and run agent loop
 	loop := agent.NewLoop(fsm, mcpClient, ollamaClient, auditLog)
 	if err := loop.Run(ctx); err != nil {
 		// Log error but don't fail the hunt
-		fmt.Printf("[Agent] Loop exited with error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[Agent] Loop exited with error: %v\n", err)
 		if err := auditLog.Append(map[string]interface{}{
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"event":     "loop_error",
 			"error":     err.Error(),
 		}); err != nil {
-			fmt.Printf("[Audit] Failed to log loop error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[Audit] Failed to log loop error: %v\n", err)
 		}
 	} else {
 		if err := auditLog.Append(map[string]interface{}{
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"event":     "loop_completed",
 		}); err != nil {
-			fmt.Printf("[Audit] Failed to log loop completion: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[Audit] Failed to log loop completion: %v\n", err)
 		}
 	}
 
