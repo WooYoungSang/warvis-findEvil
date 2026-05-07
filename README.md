@@ -1,54 +1,297 @@
-# warvis-findEvil — ITEM-212 FIND EVIL Hackathon Build
+# W.A.R.V.I.S — Find Evil
 
-**SANS x DFIR Summit "FIND EVIL" Hackathon** — agentic Incident Response system whose constraint surface IS an MCP server.
+**Woops, A Rather Very Intelligent System** | *Evil Has Nowhere to Hide*
 
-- **Source**: split out from `warvis-forRich` on 2026-05-01 (sweep #008 후속)
-- **Origin**: ITEM-212 / CARD-2-find-evil-mcp
-- **Devpost**: https://findevil.devpost.com/
-- **Submission deadline**: 2026-06-15 23:45 EDT
-- **Prize pool**: $22,000 total ($10K / $7.5K / $4.5K + SANS Summit pass)
+Automated digital forensics orchestrator powered by Gemma 4 LLM and MCP (Model Context Protocol). W.A.R.V.I.S autonomously hunts for signs of compromise across digital evidence using a five-phase finite state machine (FSM).
 
-## Layout
+**Submission**: SANS FIND EVIL Hackathon | **Deadline**: 2026-06-15 | **Author**: WoopsFactory
 
-```
-plans/ITEM-212-find-evil/   # spec, handovers, verify reports, evidence
-src/find_evil_mcp/           # MCP server source
-harness/find-evil/           # Makefile, docker-compose, fixtures, gates, scripts
-docs/find-evil/              # architecture.md, dataset.md
-pyproject.toml               # find-evil-mcp package definition
-.venv/                       # Python venv (BROKEN — rebuild required, see below)
-```
+---
 
-## Setup
+## Overview
 
-`.venv/`는 이전 워크스페이스 절대경로가 박혀 있어 깨졌다. 새로 만들어야 함:
+W.A.R.V.I.S combines a Python MCP server (9 forensic tools) with a Go orchestrator bridge to provide **end-to-end automated incident response**. The system:
+
+- **INITIALIZE**: Opens a forensic case and ingests evidence
+- **TRACE**: Builds timeline and queries structured logs
+- **SCAN**: Scans for indicators of compromise (IoCs) and memory artifacts
+- **EXPOSE**: Cross-checks findings and validates hypotheses
+- **LOCK**: Finalizes audit trail and generates forensic report
+
+The Gemma 4 LLM (via Ollama) autonomously interprets tool outputs and selects the next investigative step.
+
+---
+
+## Prerequisites
+
+### Required
+
+- **Go** 1.21+ (for warvis bridge)
+- **Python** 3.10+ (for MCP server)
+- **Ollama** (running at `localhost:29134`)
+  - Model: `gemma4:26b-a4b-it-q4_K_M`
+  - Setup: `ollama pull gemma4:26b-a4b-it-q4_K_M && ollama serve`
+
+### Verified Platforms
+
+- Linux (Ubuntu 22.04+, Debian 12+)
+- macOS (M1/M2, Intel; Ollama may require higher RAM)
+- Windows (WSL2 with Linux kernel)
+
+---
+
+## Installation
+
+### 1. Clone the Repository
 
 ```bash
-cd /home/jang/Workspace/warvis-findEvil
-rm -rf .venv
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
+git clone https://github.com/WoopsFactory/warvis-findEvil.git
+cd warvis-findEvil
 ```
 
-## Build status (2026-05-01 기준)
+### 2. Set Up Python MCP Server
 
-- ✅ phase-0: 빌드 하니스 + agent + R+1 spec
-- ✅ phase-1: MCP 서버 골격 (도구 3개, capability gate)
-- ✅ phase-2: 6개 SIFT-tool schema + outputSchema 노출 + hash-chain report + SIFT subprocess runner + curated fixtures + recall harness
-- ⏳ phase-3: 미시작 (목표: 전체 8개 산출물 완성)
+```bash
+# Create virtual environment
+python3.10 -m venv .venv
+source .venv/bin/activate
 
-## Mandatory submission artifacts (Devpost rules)
+# Install dependencies
+pip install -e .[dev]
 
-1. ✅ Public GitHub repo (MIT license)
-2. ⏳ Demo video ≤ 5 min (live terminal + agent self-correction)
-3. ⏳ Architecture diagram → `docs/find-evil/architecture.md` 기반
-4. ⏳ Project description
-5. ⏳ Dataset documentation → `docs/find-evil/dataset.md` 초안 있음
-6. ⏳ Accuracy report (false positives / hallucinations called out)
-7. ⏳ Local deployment instructions (README)
-8. ⏳ Structured logs of full agent comm + tool execution
+# Verify MCP server is importable
+python -c "from find_evil_mcp import MCP"
+```
 
-## 부모 워크스페이스 추적
+### 3. Build Go Bridge
 
-forrich.md frontmatter에 `dev_external_projects: {ITEM-212: warvis-findEvil}` 신호 발행.
+```bash
+cd warvis
+go mod download
+go build -o bin/warvis ./cmd/warvis
+cd ..
+```
+
+### 4. Verify Installation
+
+```bash
+# Test Go binary
+./warvis/bin/warvis --version
+
+# Test Python environment
+python -m pytest --co -q
+```
+
+---
+
+## Quick Start
+
+### Prepare Evidence
+
+Place forensic evidence (disk images, memory dumps, log archives) in the `evidence/` directory:
+
+```bash
+mkdir -p evidence
+# Add your evidence files (e.g., evidence/test.img, evidence/memory.bin)
+```
+
+### Run Hunt
+
+```bash
+./warvis/bin/warvis hunt evidence/test.img
+```
+
+**Output**: Case directory `/cases/<case_id>/` with audit trail:
+
+```
+/cases/<case_id>/
+  audit.jsonl           # FSM state transitions + tool calls
+  report.json           # Forensic findings (EXPOSE phase)
+  timeline.jsonl        # Event timeline (TRACE phase)
+```
+
+### Inspect Results
+
+```bash
+# View FSM progression
+jq .event_type /cases/<case_id>/audit.jsonl | sort | uniq -c
+
+# Extract findings
+jq '.findings' /cases/<case_id>/report.json | head -20
+```
+
+### Resume Interrupted Hunt
+
+If a hunt is interrupted (network, Ollama timeout), resume with:
+
+```bash
+./warvis/bin/warvis hunt evidence/test.img --case-id <case_id> --resume
+```
+
+---
+
+## Commands Reference
+
+### warvis hunt
+
+Start a forensic investigation on evidence file(s).
+
+```bash
+warvis hunt <evidence_path> [--case-id <id>] [--resume]
+```
+
+**Options**:
+- `--case-id`: Use existing case ID (resume mode)
+- `--resume`: Continue from last checkpoint
+
+**Example**:
+```bash
+warvis hunt evidence/disk.img
+# Output: Case opened with case_id=abc123def456
+```
+
+### warvis status
+
+Check FSM state of an active or completed hunt.
+
+```bash
+warvis status <case_id>
+```
+
+**Output**:
+```
+Case: abc123def456
+State: SCAN (3/5)
+Last Tool: iocs.scan
+Progress: 60%
+Timestamp: 2026-05-07T10:23:45Z
+```
+
+### warvis report
+
+Generate final forensic report.
+
+```bash
+warvis report <case_id> [--format json|html]
+```
+
+---
+
+## Architecture
+
+### FSM States & Autonomy
+
+| State | LLM Autonomy | Tools | Purpose |
+|-------|---|---|---|
+| INITIALIZE | 0% | `case.open` | Ingest evidence, compute hashes |
+| TRACE | 70% | `timeline.build`, `log.query` | Build event timeline, identify anomalies |
+| SCAN | 90% | `iocs.scan`, `memory.*`, `net.*` | Hunt indicators, scan memory for artifacts |
+| EXPOSE | 60% | `verify.cross_check` | Correlate findings, validate hypotheses |
+| LOCK | 0% | `report.append` | Finalize audit trail, seal case |
+
+### Component Stack
+
+- **MCP Server** (Python): 9 forensic tools exposing `case`, `timeline`, `log`, `iocs`, `memory`, `network`, `verify`, `report` namespaces
+- **Go Bridge** (Hunt Orchestrator): Manages FSM state, runs Ollama tool-call loop, maintains audit trail
+- **Gemma 4 LLM** (Ollama): Interprets tool outputs, selects next investigative action
+- **Audit Trail** (JSONL): Immutable record of all FSM transitions, tool calls, and LLM reasoning
+
+---
+
+## Limitations
+
+### Known Constraints
+
+1. **Lite Scanners**: YARA and Plaso tools are emulated with synthetic patterns (not production-grade)
+2. **Synthetic Fixtures**: Test evidence is auto-generated; real DFIR samples pending
+3. **Agent Autonomy**: LLM decision gates (Tests 2 & 3) still in progress; some tool invocations require manual gates
+4. **Ollama Dependency**: Requires local Ollama instance; no cloud LLM support yet
+5. **Recall**: ~60% on synthetic test suite; accuracy >80% pending real dataset tuning
+
+### Unsupported Features
+
+- ⛔ Distributed forensics (multi-node investigation)
+- ⛔ Real-time network traffic analysis (PCAP files only)
+- ⛔ Encrypted partition analysis (LUKS, BitLocker)
+- ⛔ Cloud forensics (S3, Azure Blob, GCS integrations)
+
+---
+
+## Contributing
+
+W.A.R.V.I.S welcomes contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+**Contributors**: WoopsFactory (author)  
+**Hackathon**: SANS FIND EVIL 2026  
+**License**: MIT (see [LICENSE](./LICENSE))
+
+---
+
+## Testing
+
+### Python Tests
+
+```bash
+python -m pytest tests/ -v
+python -m pytest --cov=src/find_evil_mcp/
+```
+
+### Go Tests
+
+```bash
+cd warvis
+go test ./...
+```
+
+### Integration Test
+
+```bash
+make -C harness/find-evil test-hunt
+```
+
+---
+
+## Troubleshooting
+
+### "Ollama connection refused"
+
+Ensure Ollama is running:
+
+```bash
+ollama serve
+# In another terminal:
+ollama pull gemma4:26b-a4b-it-q4_K_M
+```
+
+### "MCP server import failed"
+
+Verify Python environment:
+
+```bash
+source .venv/bin/activate
+pip install -e .[dev]
+python -c "from find_evil_mcp import MCP; print(MCP.__version__)"
+```
+
+### "Go build fails: module not found"
+
+Ensure you're in the `warvis/` directory:
+
+```bash
+cd warvis
+go mod tidy
+go build -o bin/warvis ./cmd/warvis
+```
+
+---
+
+## References
+
+- **Architecture**: [docs/find-evil/warvis-go-architecture.md](./docs/find-evil/warvis-go-architecture.md)
+- **MCP Spec**: https://modelcontextprotocol.io
+- **Ollama**: https://ollama.ai
+- **SANS FIND EVIL**: https://findevil.devpost.com/
+
+---
+
+**W.A.R.V.I.S — Turning digital chaos into forensic clarity.**
