@@ -120,11 +120,19 @@ func (l *Loop) callOllama(ctx context.Context, messages []ollama.Message) (*Acti
 		if len(truncated) > 200 {
 			truncated = truncated[:200]
 		}
+		currentStateName := ""
+		if l.fsm != nil && l.fsm.CurrentState() != nil {
+			currentStateName = l.fsm.CurrentState().Name()
+		}
 		_ = l.auditLog.Append(map[string]interface{}{
-			"timestamp":    time.Now().UTC().Format(time.RFC3339),
-			"event":        "gemma_response",
-			"gemma_output": truncated,
-			"action_type":  action.Type,
+			"timestamp":     time.Now().UTC().Format(time.RFC3339),
+			"event":         "gemma_response",
+			"action_type":   action.Type,
+			"tool_name":     action.ToolName,
+			"arguments":     action.Arguments,
+			"reason":        action.Reason,
+			"raw_output":    truncated,
+			"current_state": currentStateName,
 		})
 	}
 

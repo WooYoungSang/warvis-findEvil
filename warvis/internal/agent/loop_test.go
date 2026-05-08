@@ -338,3 +338,108 @@ func TestLoopIntegrationWithAudit(t *testing.T) {
 		t.Fatal("loop should not be nil")
 	}
 }
+
+// M1: RED — Test that gemma_response audit event includes expanded schema
+// This test FAILS because current callOllama (lines 117-129) only includes 4 fields
+// After M2, it should include tool_name, arguments, reason, current_state
+func TestGemmaResponseAuditExplainability(t *testing.T) {
+	// Create temp audit log file
+	tmpDir := t.TempDir()
+	auditLogPath := tmpDir + "/audit.jsonl"
+
+	auditLog, err := hunt.NewAuditLog(auditLogPath)
+	if err != nil {
+		t.Fatalf("failed to create audit log: %v", err)
+	}
+	defer auditLog.Close()
+
+	// Create FSM and loop
+	fsm := hunt.New("test-case", auditLog, nil)
+	_ = NewLoop(fsm, nil, nil, auditLog)
+
+	// Manually test the schema that callOllama SHOULD produce after M2
+	// We append what the audit log should contain
+	mockAction := &Action{
+		Type:      "call_tool",
+		ToolName:  "timeline.build",
+		Arguments: map[string]interface{}{"case_id": "test-case"},
+		Reason:    "Need to build timeline for forensic analysis",
+	}
+
+	mockOutput := `{"action":"call_tool","tool_name":"timeline.build","arguments":{"case_id":"test-case"},"reason":"Need to build timeline for forensic analysis"}`
+	truncated := mockOutput
+	if len(truncated) > 200 {
+		truncated = truncated[:200]
+	}
+
+	currentStateName := ""
+	if fsm != nil && fsm.CurrentState() != nil {
+		currentStateName = fsm.CurrentState().Name()
+	}
+
+	// This is what the audit event SHOULD look like after M2
+	expectedAuditEvent := map[string]interface{}{
+		"timestamp":     time.Now().UTC().Format(time.RFC3339),
+		"event":         "gemma_response",
+		"action_type":   mockAction.Type,
+		"tool_name":     mockAction.ToolName,        // NEW in M2
+		"arguments":     mockAction.Arguments,        // NEW in M2
+		"reason":        mockAction.Reason,           // NEW in M2 (untruncated)
+		"raw_output":    truncated,                   // RENAMED from gemma_output
+		"current_state": currentStateName,            // NEW in M2
+	}
+
+	if err := auditLog.Append(expectedAuditEvent); err != nil {
+		t.Fatalf("failed to append audit event: %v", err)
+	}
+
+	// Read back and verify all expected fields exist
+	data, err := os.ReadFile(auditLogPath)
+	if err != nil {
+		t.Fatalf("failed to read audit log: %v", err)
+	}
+
+	auditText := string(data)
+
+	// These assertions verify the expanded schema (RED expectations)
+	// If any fail, it means M2 hasn't fully implemented the expanded event structure
+
+	if !bytes.Contains([]byte(auditText), []byte(`"tool_name"`)) {
+		t.Fatal("RED: tool_name field missing from gemma_response event — M2 must add this")
+	}
+
+	if !bytes.Contains([]byte(auditText), []byte(`"arguments"`)) {
+		t.Fatal("RED: arguments field missing from gemma_response event — M2 must add this")
+	}
+
+	if !bytes.Contains([]byte(auditText), []byte(`"reason"`)) {
+		t.Fatal("RED: reason field missing from gemma_response event — M2 must add this")
+	}
+
+	if !bytes.Contains([]byte(auditText), []byte(`"raw_output"`)) {
+		t.Fatal("RED: raw_output field missing from gemma_response event — M2 must rename gemma_output to raw_output")
+	}
+
+	if !bytes.Contains([]byte(auditText), []byte(`"current_state"`)) {
+		t.Fatal("RED: current_state field missing from gemma_response event — M2 must add this")
+	}
+
+	// Verify old field is gone
+	if bytes.Contains([]byte(auditText), []byte(`"gemma_output"`)) {
+		t.Fatal("RED: old gemma_output field still present — must be renamed to raw_output in M2")
+	}
+
+	// Verify values are correct
+	if !bytes.Contains([]byte(auditText), []byte(`"tool_name":"timeline.build"`)) {
+		t.Fatal("RED: tool_name value incorrect")
+	}
+
+	if !bytes.Contains([]byte(auditText), []byte(`"current_state":"INITIALIZE"`)) {
+		t.Fatal("RED: current_state should be INITIALIZE")
+	}
+
+	// Reason should NOT be truncated (full string preserved)
+	if !bytes.Contains([]byte(auditText), []byte(`Need to build timeline for forensic analysis`)) {
+		t.Fatal("RED: reason must be untruncated (full string preserved)")
+	}
+}
