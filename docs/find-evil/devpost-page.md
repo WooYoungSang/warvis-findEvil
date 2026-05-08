@@ -1,8 +1,6 @@
 # W.A.R.V.I.S — Woops, A Rather Very Intelligent System
 
-**Autonomous Digital Forensics via LLM-Driven Hunt Orchestration**
-
-*Evil Has Nowhere to Hide*
+*The smallest IR agent whose architecture — not its prompt — guarantees it cannot escape its forensic role*
 
 ---
 
@@ -16,21 +14,15 @@ We asked: What if an LLM could autonomously hunt for evil?
 
 ## What It Does
 
-**W.A.R.V.I.S** is a fully autonomous digital forensics orchestrator that:
+**W.A.R.V.I.S** is a single Go binary that orchestrates fully autonomous digital forensics through a deterministic 5-state FSM (Finite State Machine). The architecture—not runtime prompt discipline—guarantees the agent cannot escape its forensic role:
 
-1. **Ingest Evidence**: Opens a forensic case (disk image, memory dump, log archives) and computes cryptographic hashes
-2. **Build Timeline**: Constructs event timelines from structured logs and identifies temporal anomalies
-3. **Scan Indicators**: Hunts for indicators of compromise (IoCs), malware signatures, and suspicious memory artifacts
-4. **Validate Hypotheses**: Cross-checks findings to distinguish true positives from false positives
-5. **Generate Report**: Seals audit trail and produces forensic findings with confidence scores
+1. **INITIALIZE** (0% LLM autonomy): Opens a forensic case (disk image, memory dump, log archives) and computes cryptographic hashes
+2. **TRACE** (70% autonomy): Builds event timelines from structured logs and identifies temporal anomalies
+3. **SCAN** (90% autonomy): Hunts for indicators of compromise (IoCs), malware signatures, and suspicious memory artifacts
+4. **EXPOSE** (60% autonomy): Cross-checks findings to distinguish true positives from false positives
+5. **LOCK** (0% autonomy): Seals audit trail and produces forensic findings with confidence scores
 
-The system uses a **5-phase FSM (Finite State Machine)** to ensure rigorous, auditable investigation flow:
-
-```
-INITIALIZE → TRACE → SCAN → EXPOSE → LOCK
-```
-
-Each phase automatically selects forensic tools and interprets results. **LLM autonomy increases** as investigation progresses (0% → 90%), allowing human reviewers to intervene at critical decision points.
+Each state declares its allowed tools at compile time. The Go binary physically prevents tool calls outside the active state—this is architectural self-restraint, not gateway-mediated discipline. If a hunt is interrupted, resume with `warvis hunt --case-id <uuid> --resume` to continue without re-burning LLM-turn budgets.
 
 ---
 
@@ -104,6 +96,25 @@ Each phase automatically selects forensic tools and interprets results. **LLM au
 ✅ **Synthetic Fixtures**: 10+ curated evidence files for testing  
 ✅ **Documentation**: Architecture.md, README, demo script, this narrative  
 ✅ **Open Source**: MIT-licensed, ready for community contributions  
+
+---
+
+## How We Compare to Valhuntir
+
+**Valhuntir** (by Steve Anson, SANS instructor) is the comprehensive DFIR reference: 90+ tools across 8 backends, 22K-record forensic RAG, 3,700+ Hayabusa Sigma rules, and 7 months of compounding commits. We do not claim to compete on breadth or depth.
+
+Instead, warvis focuses on three defensible differentiators that Valhuntir does not occupy:
+
+**1. Single Go Binary, No Runtime Dependencies**  
+`warvis hunt` runs offline on a fresh SIFT VM without Python, Docker, or external gateways. Valhuntir's default path requires Claude API egress; our binary runs airgapped once Ollama is initialized locally. This is not marketing—it is architectural.
+
+**2. Compile-Time Tool Whitelists in 5-State FSM**  
+In `warvis/internal/hunt/state.go`, each FSM state declares allowed tools as Go literals. The agent physically cannot call SCAN tools while in TRACE state. Valhuntir's discipline is gateway-mediated (a Python service can be modified at runtime); ours is part of the binary. For regulated environments where runtime code modification is forbidden, this is meaningful.
+
+**3. Budget-Preserving Resume + Kill-Switch Harness**  
+Interrupted hunts resume without re-burning LLM-turn quota. `make kill-switch-check` runs 5 reproducible tests that verify agent terminality in CI—proving our FSM constraints hold at scale. Valhuntir's quality depends on prompt discipline; ours includes machine-checkable verification.
+
+For forensic teams where airgap-readiness and architectural guarantees matter, warvis is a deployable answer. For open settings where tool breadth dominates, Valhuntir is the reference. See [docs/find-evil/valhuntir-comparison.md](../valhuntir-comparison.md) for the full honest positioning.
 
 ---
 

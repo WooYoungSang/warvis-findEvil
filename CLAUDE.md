@@ -1,6 +1,6 @@
 # W.A.R.V.I.S — Find Evil
 
-**Woops, A Rather Very Intelligent System** | *Evil Has Nowhere to Hide*
+**Woops, A Rather Very Intelligent System** | *The smallest IR agent whose architecture — not its prompt — guarantees it cannot escape its forensic role*
 **Author**: WoopsFactory | **Hackathon**: SANS FIND EVIL | **Deadline**: 2026-06-15
 **Kill Switch**: Go bridge must be demo-stable by **2026-05-09** or revert to Python stack.
 

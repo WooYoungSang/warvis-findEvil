@@ -1,10 +1,20 @@
 # W.A.R.V.I.S — Find Evil
 
-**Woops, A Rather Very Intelligent System** | *Evil Has Nowhere to Hide*
+> *The smallest IR agent whose architecture — not its prompt — guarantees it cannot escape its forensic role*
 
-Automated digital forensics orchestrator powered by Gemma 4 LLM and MCP (Model Context Protocol). W.A.R.V.I.S autonomously hunts for signs of compromise across digital evidence using a five-phase finite state machine (FSM).
+**W.A.R.V.I.S** (Woops, A Rather Very Intelligent System) is a single Go binary that orchestrates automated digital forensics using a deterministic 5-state FSM (Finite State Machine) and budget-preserving resume capability. Built for airgapped incident response environments where reliability and reproducibility matter more than breadth.
 
 **Submission**: SANS FIND EVIL Hackathon | **Deadline**: 2026-06-15 | **Author**: WoopsFactory
+
+## Why warvis (vs Valhuntir)
+
+We acknowledge **Valhuntir** as the comprehensive DFIR reference platform (90+ tools, 22K-record RAG, Sigma rules, multi-backend orchestration). We do not claim to match its breadth. Instead, warvis focuses on three narrow differentiators:
+
+1. **Single Go binary** — No Python runtime, no Docker, no gateway. Deployable offline on a fresh SIFT VM in seconds.
+2. **5-state Hunt FSM with compile-time tool whitelist** — Architectural guarantee that the agent cannot escape its forensic role, enforced at build time (not runtime).
+3. **Budget-preserving resume + kill-switch harness** — Every hunt is reproducible and verifiable in CI; interrupted hunts resume without re-burning LLM-turn quota.
+
+For forensic teams in airgapped or regulated environments, this narrow approach is a deployable answer. For open settings where breadth dominates, Valhuntir is the reference. See [docs/find-evil/valhuntir-comparison.md](./docs/find-evil/valhuntir-comparison.md) for the full honest positioning matrix.
 
 ---
 
