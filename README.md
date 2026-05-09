@@ -1,5 +1,7 @@
 # W.A.R.V.I.S — Find Evil
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 > *The smallest IR agent whose architecture — not its prompt — guarantees it cannot escape its forensic role*
 
 **W.A.R.V.I.S** (Woops, A Rather Very Intelligent System) is a single Go binary that orchestrates automated digital forensics using a deterministic 5-state FSM (Finite State Machine) and budget-preserving resume capability. Built for airgapped incident response environments where reliability and reproducibility matter more than breadth.
