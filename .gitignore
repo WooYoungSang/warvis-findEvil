@@ -30,3 +30,5 @@ repos/find-evil-fixtures/cases/sans-starter/*
 !repos/find-evil-fixtures/cases/sans-starter/evidence
 !repos/find-evil-fixtures/cases/sans-starter/.gitkeep
 !repos/find-evil-fixtures/cases/sans-starter/smoke-*.txt
+!repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace/
+!repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace/**

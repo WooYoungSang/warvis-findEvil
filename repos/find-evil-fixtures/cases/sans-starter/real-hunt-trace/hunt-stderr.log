@@ -1,0 +1,5 @@
+[Agent] Entered state
+[Agent] Tool timeline.build called successfully
+[Agent] Tool timeline.build called successfully
+[Agent] Tool timeline.build called successfully
+[Agent] Loop exited with error: ollama call failed: ollama chat failed after 3 retries: http request: Post "http://localhost:29134/api/chat": context deadline exceeded (Client.Timeout exceeded while awaiting headers)

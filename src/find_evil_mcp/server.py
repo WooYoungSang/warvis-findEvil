@@ -3,6 +3,7 @@
 import json
 import asyncio
 from mcp.server import Server
+from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 from find_evil_mcp.tools.case_open import handle_case_open
@@ -288,7 +289,14 @@ def create_server() -> Server:
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict):
-        """Call a tool by name."""
+        """Call a tool by name.
+
+        mcp >= 1.0 with outputSchema requires returning a (content, structured)
+        tuple so the framework can validate the structured output against the
+        per-tool outputSchema declared in list_tools(). Returning only
+        TextContent fails with "Output validation error: outputSchema defined
+        but no structured output returned".
+        """
         try:
             if name == "case.open":
                 result = await handle_case_open(arguments)
@@ -309,30 +317,29 @@ def create_server() -> Server:
             elif name == "verify.cross_check":
                 result = await handle_verify_cross_check(arguments)
             else:
-                return TextContent(
-                    type="text",
-                    text=f"Unknown tool: {name}",
-                )
+                return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
-            return TextContent(
-                type="text",
-                text=json.dumps(result),
-            )
+            content = [TextContent(type="text", text=json.dumps(result))]
+            return content, result
 
         except Exception as e:
-            return TextContent(
+            return [TextContent(
                 type="text",
                 text=f"Error calling tool {name}: {str(e)}",
-            )
+            )]
 
     return server
 
 
 async def main():
-    """Main entry point for stdio transport."""
+    """Main entry point for stdio transport (mcp >= 1.0 API)."""
     server = create_server()
-    async with server.stdio():
-        await server.wait_closed()
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            server.create_initialization_options(),
+        )
 
 
 if __name__ == "__main__":

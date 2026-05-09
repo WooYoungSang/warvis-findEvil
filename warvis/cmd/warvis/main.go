@@ -266,11 +266,16 @@ func runHunt(args []string) error {
 
 func evidenceArgs(path string) map[string]string {
 	lower := strings.ToLower(path)
+	base := strings.ToLower(filepath.Base(path))
 	switch {
 	case strings.HasSuffix(lower, ".mem") || strings.HasSuffix(lower, ".dmp") || strings.HasSuffix(lower, ".vmem"):
 		return map[string]string{"mem_path": path}
 	case strings.HasSuffix(lower, ".pcap") || strings.HasSuffix(lower, ".pcapng"):
 		return map[string]string{"pcap_path": path}
+	case (strings.HasSuffix(lower, ".img") || strings.HasSuffix(lower, ".raw")) && strings.Contains(base, "memory"):
+		// Ambiguous extensions (.img / .raw) with "memory" in basename → memory dump.
+		// Matches SANS dc3dd convention (e.g. base-wkstn-05-memory.img).
+		return map[string]string{"mem_path": path}
 	default:
 		return map[string]string{"image_path": path}
 	}

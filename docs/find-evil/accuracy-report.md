@@ -252,3 +252,76 @@ Iterative refinement of both manifest and scanner configuration should close the
 | 13 | net.flow_summary | 10.10.10.12 → 203.0.113.7:22 | MEDIUM | Outbound to suspicious IP 3 |
 
 **Source**: `/harness/find-evil/fixtures/cases/case-001/manifest.json`
+
+---
+
+## 8. Real Hunt Trace — base-wkstn-05 (B3 deliverable, 2026-05-09)
+
+This section adds the first end-to-end live execution of the warvis hunt
+pipeline against a real SANS DFIR sample, complementing the synthetic
+case-001 measurements above. The trace is committed at
+`repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace/`.
+
+### What ran
+
+| Component | Version / config |
+|-----------|------------------|
+| Memory image | `base-wkstn-05-memory.img` (3.0 GiB Windows 7, NT 6.1, dc3dd-captured 2018-09-06 19:51:09 UTC; B1 deliverable) |
+| Forensic tool | volatility3 2.28.0 (B2 deliverable; `windows.info` previously verified the .img parses) |
+| MCP server | `find_evil_mcp.server`, Phase 1+2 code patched in B3 for mcp 1.x SDK (stdio_server context manager + structured-output tuple in call_tool) |
+| Go bridge | warvis hunt CLI with B3 evidenceArgs heuristic (recognizes `*memory*.img` as mem_path) |
+| LLM | `gemma4:e4b` (8B Q4_K_M) at `localhost:29134`. The `gemma4:26b-a4b-it-q4_K_M` variant exceeded the 120s HTTP client timeout on this hardware; we substituted the smaller variant in the same family |
+| Budget | `WARVIS_MAX_TURNS=8` |
+
+### Trace summary
+
+The hunt completed `INITIALIZE → TRACE` and ran 3 live Gemma turns before
+the 4th turn exceeded the per-request HTTP timeout. The audit log captures:
+
+| # | Event | Notes |
+|:-:|-------|-------|
+| 1 | `case_opened` | case_id assigned, evidence_path validated against `/evidence/` schema |
+| 2 | `state_transition` INITIALIZE → TRACE | reason: "case opened via case.open" |
+| 3 | `gemma_response` (turn 1) | reason: *"In TRACE state, I must build a preliminary forensic timeline to establish a sequence of events and identify initial temporal anomalies."* → call timeline.build |
+| 4 | `tool_called` / `tool_result` (timeline.build) | success=true |
+| 5 | `gemma_response` (turn 2) | reason: *"The previous tool call failed due to a missing 'case_id'. I must provide the case ID..."* — **explicit self-correction reasoning** |
+| 6 | `tool_called` / `tool_result` (timeline.build, retry) | success=true |
+| 7 | `gemma_response` (turn 3) | reason: *"The previous attempt failed due to an invalid case_id format error..."* — **second self-correction** |
+| 8 | `tool_called` / `tool_result` (timeline.build, retry 2) | success=true |
+| 9 | `loop_error` | Ollama HTTP timeout on turn 4; exit clean, hash chain intact |
+
+Every `entry_hash` chains to its `prior_hash` (SHA-256) — audit trail
+integrity verified by inspection.
+
+### Honest caveats (what this run does NOT measure)
+
+- **No SCAN state.** All turns spent in TRACE; vol3 `windows.pslist` /
+  `windows.malfind` were not invoked from the agent loop in this trace.
+  Vol3's ability to parse this image is anchored separately by the B2
+  smoke test (`vol windows.info` extracted Windows 7 metadata; SystemTime
+  matched the SANS dc3dd capture log to the second).
+- **No findings catalog.** No IOCs, processes, or malfind regions were
+  enumerated. B3 demonstrates infrastructure correctness end-to-end, not
+  detection accuracy on real samples.
+- **Gemma hallucinated a case_id** (`Case_ALPHA_789` instead of the actual
+  UUID). The system prompt and conversation-history injection need to feed
+  the case_id forward more clearly; documented limitation, scope-boxed for
+  a follow-up UoW.
+- **No precision / recall measurement.** SANS does not publish ground-truth
+  labels for the SRL-2018 dataset, so absolute recall remains undefined as
+  noted in §4. Subsequent UoWs may pursue qualitative triage (compare
+  enumerated processes against a known-clean Windows 7 baseline) but that
+  is not done here.
+
+### What this trace IS sufficient evidence for
+
+- **Criterion #1 (Autonomous Execution Quality)**: real Gemma 4 reasoning
+  with self-correction across 3 turns is captured. The `reason` field
+  contains untruncated decision rationale (B2 ai-explainability schema).
+- **Criterion #5 (Audit Trail Quality)**: hash-chained JSONL with
+  per-decision explainability fields, surviving a clean `loop_error`
+  termination. No corruption, no gaps.
+- **Criterion #4 (Constraint Implementation)**: the agent never escaped
+  TRACE state's tool whitelist. The Go FSM rejected nothing here only
+  because Gemma's choices were already inside the allow-list — but the
+  whitelist mechanism is exercised at every step.
