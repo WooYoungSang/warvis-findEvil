@@ -32,3 +32,5 @@ repos/find-evil-fixtures/cases/sans-starter/*
 !repos/find-evil-fixtures/cases/sans-starter/smoke-*.txt
 !repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace/
 !repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace/**
+!repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace-26b/
+!repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace-26b/**

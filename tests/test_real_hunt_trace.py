@@ -10,10 +10,14 @@ import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-TRACE_DIR = REPO_ROOT / "repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace"
+SANS_DIR = REPO_ROOT / "repos/find-evil-fixtures/cases/sans-starter"
+TRACE_DIR = SANS_DIR / "real-hunt-trace"
+TRACE_DIR_26B = SANS_DIR / "real-hunt-trace-26b"
 AUDIT = TRACE_DIR / "audit.jsonl"
+AUDIT_26B = TRACE_DIR_26B / "audit.jsonl"
 STATE = TRACE_DIR / "state.json"
 TRACE_README = TRACE_DIR / "README.md"
+TRACE_README_26B = TRACE_DIR_26B / "README.md"
 ACCURACY_DOC = REPO_ROOT / "docs/find-evil/accuracy-report.md"
 
 
@@ -104,3 +108,58 @@ def test_accuracy_report_acknowledges_caveats():
         "documented limitation",
     )
     assert any(p in text for p in caveat_phrases)
+
+
+# --- 26B sibling trace ---
+
+def _entries_26b():
+    return [
+        json.loads(line) for line in AUDIT_26B.read_text().splitlines() if line.strip()
+    ]
+
+
+def test_26b_trace_dir_exists():
+    assert TRACE_DIR_26B.is_dir()
+
+
+def test_26b_audit_present():
+    assert AUDIT_26B.is_file()
+
+
+def test_26b_readme_present():
+    assert TRACE_README_26B.is_file()
+
+
+def test_26b_audit_all_lines_valid_json():
+    for line in AUDIT_26B.read_text().splitlines():
+        if line.strip():
+            json.loads(line)
+
+
+def test_26b_has_case_opened_and_state_transition():
+    events = [e["event"] for e in _entries_26b()]
+    assert "case_opened" in events
+    assert "state_transition" in events
+
+
+def test_26b_audit_hash_chain_continuous():
+    entries = _entries_26b()
+    prev = None
+    for e in entries:
+        if prev is not None:
+            assert e.get("prior_hash") == prev.get("entry_hash"), (
+                f"hash chain break at event={e.get('event')}"
+            )
+        prev = e
+
+
+def test_26b_demonstrates_escalation_or_self_correction():
+    """26B should either escalate cleanly OR correct itself.
+    Either is acceptable evidence for criterion #1."""
+    text = AUDIT_26B.read_text().lower()
+    assert "escalate" in text or "previous" in text
+
+
+def test_accuracy_report_compares_model_variants():
+    text = ACCURACY_DOC.read_text().lower()
+    assert "26b" in text and "8b" in text

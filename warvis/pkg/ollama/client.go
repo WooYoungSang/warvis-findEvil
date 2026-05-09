@@ -25,7 +25,11 @@ func NewClient(baseURL, model string) *Client {
 		baseURL: baseURL,
 		model:   model,
 		httpClient: &http.Client{
-			Timeout: 120 * time.Second,
+			// 26B-class quantized models can take >2min for first-token on
+			// cold load even on a 24 GB VRAM GPU. 600s leaves room for
+			// model load + reasoning; outer hunt timeout (state/hunt budgets)
+			// still bounds total wall time.
+			Timeout: 600 * time.Second,
 		},
 	}
 }

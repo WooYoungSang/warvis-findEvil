@@ -1,0 +1,26 @@
+{
+  "case_id": "6df6399d-35a4-4ae5-bcfd-d5ac313e51fe",
+  "current_state": "TRACE",
+  "created_at": "2026-05-09T08:02:41Z",
+  "updated_at": "2026-05-09T08:02:41Z",
+  "budgets": {
+    "MaxLLMTurns": 50,
+    "CurrentLLMTurns": 0,
+    "MaxInvalidJSONAttempts": 10,
+    "CurrentInvalidJSONAttempts": 0,
+    "MaxDuplicateToolCalls": 5,
+    "CurrentDuplicateToolCalls": 0,
+    "MaxToolCallsTotal": 100,
+    "CurrentToolCallsTotal": 0,
+    "MaxStateDurationSeconds": 600,
+    "StateStartedAt": "2026-05-09T08:02:41Z"
+  },
+  "trace_state": {
+    "CaseID": "6df6399d-35a4-4ae5-bcfd-d5ac313e51fe",
+    "TimelinePath": "/cases/6df6399d-35a4-4ae5-bcfd-d5ac313e51fe/timeline.jsonl",
+    "EventCount": 0,
+    "SourcesFound": [],
+    "LastQuery": "",
+    "QueryResults": []
+  }
+}

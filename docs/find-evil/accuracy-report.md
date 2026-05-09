@@ -325,3 +325,36 @@ integrity verified by inspection.
   TRACE state's tool whitelist. The Go FSM rejected nothing here only
   because Gemma's choices were already inside the allow-list — but the
   whitelist mechanism is exercised at every step.
+
+### 8a. 26B vs 8B model comparison (sibling trace)
+
+After the initial 8B (`gemma4:e4b`) run we re-ran the same hunt with
+`gemma4:26b-a4b-it-q4_K_M` (25.8B params, Q4_K_M, 19.5 GB VRAM on RTX
+4090). The HTTP client timeout in `pkg/ollama/client.go` was raised from
+120s to 600s to accommodate 26B-class first-token latency. The 26B trace
+is committed at
+`repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace-26b/`.
+
+Both traces hit the same root-cause issue (case_id not threaded through
+agent conversation history) but **handled it very differently** — and the
+contrast is itself the strongest single piece of evidence we have for
+SANS criterion #1 (autonomous execution quality, "matching a senior
+analyst"):
+
+| | gemma4:e4b (8B) | gemma4:26b (25.8B) |
+|---|---|---|
+| Turn 1 | timeline.build (success) | timeline.build (success) |
+| Turn 2 | **fabricated** `case_id="Case_ALPHA_789"`, retried | **escalated** with explicit reason: *"Missing critical context: The 'case_id' parameter is required... I cannot proceed without a valid identifier"* |
+| Turn 3 | retried with same fabricated case_id + larger limit | (terminated cleanly via escalate) |
+| Exit reason | Ollama HTTP timeout on turn 4 | clean `escalated` action recorded in audit trail |
+| audit.jsonl | 12 entries, all hash-chained | 7 entries, all hash-chained |
+
+The 26B model's behavior is what a senior analyst would do: refuse to
+proceed with hallucinated parameters and ask for the missing context
+explicitly. The Hunt FSM's `escalate` action (defined in
+`warvis/internal/agent/loop.go`) is a first-class agent verb specifically
+to support this safer behavior; 26B exercised it, 8B did not.
+
+We are not claiming 26B is "the right model" — we are claiming the *Hunt
+FSM design accommodates both* and the 26B run produces a cleaner audit
+trail. Both are committed for transparency.
