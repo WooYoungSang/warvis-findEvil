@@ -47,19 +47,36 @@ WINNING_PLAYBOOK timeline (record demo D-7, freeze at D-2).
 - **Honest dual-path documentation pattern is load-bearing.** Match the tone of `accuracy-report.md` §4 / §8 — say what you measured, say what you didn't, never overclaim. The "honest L4 caveat" in §8b is the model.
 - **Deadline freeze**: stop net-new code at D-5 (2026-06-10); after that only fix-fixes for the demo recording and form submission.
 
-## Your Workflow per Task
+## Your Workflow per Task — Use the Forge Pipeline
 
-The project uses Shape Up Bets + a UoW pipeline called `forge` (see `.claude/skills/forge/`). For each task below:
+This project's UoW conventions live in `.claude/skills/forge/`. The Claude-Code-native skill calls dedicated subagents (`warvis-initiator`, `warvis-planner`, `warvis-maker`, `warvis-verifier`, `warvis-finisher`) for the five stages below. **Codex CLI does not load that skill, but the staged workflow itself is the value — replicate it explicitly using whatever subagent / spawn mechanism your runtime provides** (Codex's own subagents, `gpt-5-codex` with role prompting, etc.). Spawning a fresh agent per stage keeps each context tight and forces a paper trail.
 
-1. **Shape a Bet** if scope is open or risky. Drop into `.omc/plans/bet-warvis-findeval--<slug>.md` mirroring `bet-warvis-findeval--prompt-context-threading.md` (frontmatter + lock-in conditions + kill condition).
-2. **Implement TDD-style** when the deliverable is testable: write a failing pytest / Go test first, then make it pass. Match the cwd-independent pattern in `tests/test_*.py` (use `Path(__file__).resolve().parent.parent`).
-3. **Verify** with the four standard gates:
-   - `python -m pytest tests/ -q`
-   - `ruff check tests/`
-   - `cd warvis && go test ./...`
-   - `make -C harness/find-evil kill-switch-check`
-4. **Commit + push** with a descriptive multi-paragraph body matching the existing style in `git log --format=fuller -n 5`. Use `Co-Authored-By: Codex <noreply@openai.com>` (or whatever attribution your CLI uses).
-5. **DO NOT call devos MCP tools** (`devos_*`) — those require a separate MCP server you may not have access to. Skip the devos lifecycle calls; just commit the work directly. The `.omc/plans/<slug>.md` plan file is the durable handoff artifact.
+For every task in this handoff, run all five stages — do not collapse them into a single monolithic agent run; the discipline is what catches the four-bug-cascade-style discoveries the project has been making.
+
+| Stage | Role / agent | Inputs | Outputs |
+|------:|-------------|--------|---------|
+| 1. **Ignite** | initiator (read-only quick scan) | task slug, project tree | `.omc/plans/<slug>.md` scaffold; baseline test-run + `git status` capture; STOP-points named |
+| 2. **Blueprint** | planner | scaffold + relevant context files (max ~10 reads) | 3–5 milestones written into the same plan file with explicit done-signals; risk rating LOW / MED / HIGH; verification strategy; any HIGH risk pauses for user approval |
+| 3. **Hammer** | maker | plan file + build/test commands | RED test first, then GREEN code, then REFACTOR. One commit per milestone (or one commit at the end with a multi-paragraph body matching `git log --format=fuller -n 5`). No sub-spawning beyond this stage. |
+| 4. **Temper** | verifier | plan file + verification strategy | Runs the four gates below; emits PASS / PASS_WITH_WARN / BLOCK; on BLOCK returns failure list to maker for ≤2 retry rounds. |
+| 5. **Quench** | finisher | full session artefacts + verifier verdict | Updates the plan file frontmatter to `status: shipped` with a 1-line `lock_in_green` / `lock_in_residual` summary; commits the plan; pushes. |
+
+The **four standard gates** at Stage 4:
+
+```bash
+python -m pytest tests/ -q
+ruff check tests/
+( cd warvis && go test ./... )
+make -C harness/find-evil kill-switch-check
+```
+
+Hard rules across all stages:
+
+- **Bet first when scope is open or risky.** Drop a `bet-warvis-findeval--<slug>.md` into `.omc/plans/` modelled after `bet-warvis-findeval--prompt-context-threading.md` (frontmatter + lock-in conditions + scope hammer + kill condition). Tasks 2 and 4 below should each get their own Bet; Tasks 1 and 3 are small enough to skip the Bet step.
+- **Commit attribution.** Use `Co-Authored-By: Codex <noreply@openai.com>` (or your runtime's equivalent). Match the existing multi-paragraph commit body style — read `git log --format=fuller -n 5` before writing.
+- **Cwd-independent tests.** All new `tests/test_*.py` must use `Path(__file__).resolve().parent.parent` for repo-root resolution; the existing suite is cwd-stable and breaks if you regress that.
+- **DO NOT call devos MCP tools.** This project has historically logged each UoW lifecycle to a `devos_*` MCP server, but Codex CLI is not connected to it. Treat `.omc/plans/<slug>.md` (Bet) and the resulting commits as the durable handoff artefacts — they fully replace devos's role.
+- **Sub-agent spawning is encouraged but not required.** If Codex CLI exposes a `Task` / `agent` / sub-spawn primitive, use it per stage so each role gets a clean context. If not, run the stages sequentially in one agent but write each stage's output to the plan file before moving on — that is what makes the discipline observable.
 
 ## Tasks (priority order)
 
