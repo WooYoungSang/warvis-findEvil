@@ -260,6 +260,50 @@ The image is NOT redistributed in this repository — only its hash and
 provenance metadata are committed. The image itself lives on the contributor's
 `/mnt/disk1` partition and is referenced via a tracked symlink.
 
+## Installed Tools (B2 deliverable)
+
+UoW `real-tool-installation` installed the forensic binaries needed to
+parse `base-wkstn-05-memory.img` against the existing
+`src/find_evil_mcp/sift_runner.py` whitelist (locked Phase 1+2 code).
+
+| Tool | Version | Source | Install path | sift_runner key |
+|------|---------|--------|--------------|:---------------:|
+| **volatility3** | 2.28.0 | `pip install --user volatility3` (no sudo) | `~/.local/bin/vol`, `~/.local/lib/python3.10/site-packages/volatility3/` | `volatility3` → `vol` |
+
+Symbol cache (downloaded on first parse) lives at
+`~/.local/lib/python3.10/site-packages/volatility3/symbols/`. Subsequent
+hunts reuse the cache; first-run cost was ~110 file fetches.
+
+### Smoke test — `vol windows.info`
+
+Captured at `repos/find-evil-fixtures/cases/sans-starter/smoke-vol-windows-info.txt`.
+
+Key extracted metadata (proves the .img is a valid Windows memory image):
+
+| Field | Value |
+|-------|-------|
+| Is64Bit | True |
+| NtMajorVersion / NtMinorVersion | 6 / 1 (Windows 7 / Server 2008 R2) |
+| NtProductType | NtProductWinNt |
+| NtSystemRoot | `C:\Windows` |
+| Kernel Base | `0xf80003219000` |
+| Layer / memory_layer | `WindowsIntel32e` over `FileLayer` |
+| **SystemTime** | **2018-09-06 19:51:09+00:00** ← matches dc3dd capture log to the second |
+
+The SystemTime equality is the strongest end-to-end chain-of-custody anchor:
+SANS captured the dump at 2018-09-06 19:51:09 UTC; volatility3 parsed the
+same instant from the kernel structures eight years later. The image is
+intact and the analyzer is correctly bound to it.
+
+### Out of scope for B2 (deferred or N/A)
+
+| Tool | sift_runner key | Status |
+|------|:---------------:|--------|
+| yara CLI | `yara` | Deferred — `pip install yara-python` ships only a Python module, not the `yara` CLI; sudo `apt install yara` not requested in B2. Will revisit at B3 if a yara-based hunt step is needed. |
+| plaso / log2timeline | `plaso` | N/A for B1 (no disk image acquired yet). |
+| zeek / suricata | `zeek` / `suricata` | N/A for B1 (no PCAP acquired yet). |
+| sigma | `sigma` | Rule format; no binary needed. |
+
 ## File Manifest
 
 | Path | Size | Checksum | Role |

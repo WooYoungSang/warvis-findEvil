@@ -1,0 +1,23 @@
+
+Variable	Value
+
+Kernel Base	0xf80003219000
+DTB	0x187000
+Symbols	file:///home/jang/.local/lib/python3.10/site-packages/volatility3/symbols/windows/ntkrnlmp.pdb/DADDB88936DE450292977378F364B110-1.json.xz
+Is64Bit	True
+IsPAE	False
+layer_name	0 WindowsIntel32e
+memory_layer	1 FileLayer
+KdVersionBlock	0xf800033fc0e8
+Major/Minor	10276.6146
+MachineType	9284
+KeNumberProcessors	0
+SystemTime	2018-09-06 19:51:09+00:00
+NtSystemRoot	C:\Windows
+NtProductType	NtProductWinNt
+NtMajorVersion	6
+NtMinorVersion	1
+PE MajorOperatingSystemVersion	6
+PE MinorOperatingSystemVersion	1
+PE Machine	34404
+PE TimeDateStamp	Thu Aug  2 02:58:40 2018

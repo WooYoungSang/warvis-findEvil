@@ -29,3 +29,4 @@ repos/find-evil-fixtures/cases/sans-starter/*
 !repos/find-evil-fixtures/cases/sans-starter/README.md
 !repos/find-evil-fixtures/cases/sans-starter/evidence
 !repos/find-evil-fixtures/cases/sans-starter/.gitkeep
+!repos/find-evil-fixtures/cases/sans-starter/smoke-*.txt
