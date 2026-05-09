@@ -212,28 +212,53 @@ make -C harness/find-evil accuracy
 ### SHA-256 Checksums
 All checksums stored in `checksums.txt` with provenance comments.
 
-## Future SANS Sample Integration
+## SANS Starter Case (sans-starter)
 
-To add official SANS FIND EVIL samples:
+Acquired 2026-05-09 from the official SANS FIND EVIL hackathon resources.
 
-1. **Download**: `sansorg.egnyte.com/fl/HhH7crTYT4JK` (requires registration)
-2. **Store**: `cases/case-00X/evidence/` (new case directory)
-3. **Label**: Update manifest.json with SANS-provided IOC labels
-4. **Hash**: Record SHA-256 in checksums.txt with `[SANS-sample]` tag
-5. **License**: Add SANS license header if redistribution restricted
+| Field | Value |
+|-------|-------|
+| **Source URL** | <https://sansorg.egnyte.com/fl/HhH7crTYT4JK> |
+| **Cited at** | <https://findevil.devpost.com/resources> |
+| **Storage path** | `/mnt/disk1/INCUBATOR/warvis-findEvil-fixtures/sans-starter/` |
+| **Repo symlink** | `repos/find-evil-fixtures/cases/sans-starter/evidence/` |
+| **MANIFEST** | `repos/find-evil-fixtures/cases/sans-starter/MANIFEST.md` |
+| **Folder origin** | `SRL-2018/` (multi-host enterprise simulation, 22 memory dumps + sibling disk images) |
 
-Example manifest entry for SANS case:
-```json
-{
-  "case_id": "22222222-3333-4333-8444-555555555555",
-  "case_name": "case-002-sans-sample",
-  "source": "SANS FIND EVIL public dataset",
-  "license": "SANS evaluation (non-commercial, forensics research only)",
-  "downloaded": "2026-05-15",
-  "sha256": "...",
-  "expected_findings": { ... }
-}
-```
+### Acquired so far (B1 deliverable)
+
+| Artifact | Type | Size | SHA256 (head) | Origin MD5 verified |
+|----------|------|------|---------------|:--:|
+| `base-wkstn-05-memory.7z` | 7z archive | 626 MB | `9e518419…` | n/a |
+| `base-wkstn-05-memory.img` | raw memory dump | 3.0 GiB | `74ff679b…` | ✅ matches `bb6df5c0…c4fe0` |
+| `base-wkstn-05-memory.md5` | dc3dd hash log | 405 B | `822617f7…` | n/a |
+
+Capture provenance (from companion `.md5` log): dc3dd 7.2.641 captured the
+physical memory of `base-wkstn-05` at 2018-09-06 19:51:09 UTC from
+`/mnt/nfury/base-wkstn-05/pmem/pmem`. The original MD5 has been re-verified
+locally — the chain of custody is intact.
+
+### Naming convention note
+
+The `base-` prefix is a SANS naming convention for the canonical case capture.
+The SRL-2018 folder is a leaf node — there is no separate `incident-` sibling
+directory. Evil, if present, is hidden inside `base-wkstn-05-memory.img` as it
+would be in a real-world IR engagement, not segregated into a labelled
+"infected" file.
+
+### Out of scope for B1 (handled by B2/B3)
+
+- B2 (`real-tool-installation`): install `yara` / `volatility3` / etc. binaries.
+- B3 (`real-hunt-trace`): run a Gemma 4 hunt against `base-wkstn-05-memory.img`,
+  capture the audit trail, and update `accuracy-report.md` with measured
+  precision/recall against any findings.
+
+### License
+
+SANS-provided case data; usage is governed by SANS hackathon Terms of Use.
+The image is NOT redistributed in this repository — only its hash and
+provenance metadata are committed. The image itself lives on the contributor's
+`/mnt/disk1` partition and is referenced via a tracked symlink.
 
 ## File Manifest
 

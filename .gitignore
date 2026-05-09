@@ -21,3 +21,11 @@ warvis/.omc/project-memory.json
 # But keep plans (canonical UoW specs) and notepad
 !.omc/plans/
 !warvis/.omc/plans/
+
+# Large DFIR fixture binaries — track only manifest + readme + evidence symlink
+# (the symlink resolves to /mnt/disk1; files inside it are not tracked)
+repos/find-evil-fixtures/cases/sans-starter/*
+!repos/find-evil-fixtures/cases/sans-starter/MANIFEST.md
+!repos/find-evil-fixtures/cases/sans-starter/README.md
+!repos/find-evil-fixtures/cases/sans-starter/evidence
+!repos/find-evil-fixtures/cases/sans-starter/.gitkeep
