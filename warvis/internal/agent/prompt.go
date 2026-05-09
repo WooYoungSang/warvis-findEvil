@@ -111,7 +111,7 @@ func getStateDescription(state hunt.State) string {
 		Goal: High-confidence conclusions with supporting evidence.`
 
 	case "LOCK":
-		return `You are finalizing the case. Use report.append to document findings. No new evidence collection.`
+		return `The case is locked. This is a terminal state with no available tools; do not collect evidence or append findings.`
 
 	default:
 		return fmt.Sprintf("Unknown state: %s", state.Name())

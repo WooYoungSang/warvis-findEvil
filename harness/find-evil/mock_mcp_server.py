@@ -4,6 +4,7 @@ import json
 import sys
 import uuid
 
+
 def send_json(obj):
     sys.stdout.write(json.dumps(obj) + '\n')
     sys.stdout.flush()
@@ -14,7 +15,7 @@ def read_json():
         if not line:
             return None
         return json.loads(line)
-    except:
+    except (json.JSONDecodeError, OSError):
         return None
 
 # Main loop
@@ -22,10 +23,10 @@ while True:
     msg = read_json()
     if not msg:
         break
-    
+
     msg_id = msg.get('id')
     method = msg.get('method')
-    
+
     if method == 'initialize':
         send_json({
             'jsonrpc': '2.0',
@@ -49,7 +50,11 @@ while True:
                     {'name': 'timeline.build', 'description': 'Build timeline', 'inputSchema': {}},
                     {'name': 'log.query', 'description': 'Query logs', 'inputSchema': {}},
                     {'name': 'iocs.scan', 'description': 'Scan IOCs', 'inputSchema': {}},
-                    {'name': 'memory.process_list', 'description': 'List processes', 'inputSchema': {}},
+                    {
+                        'name': 'memory.process_list',
+                        'description': 'List processes',
+                        'inputSchema': {},
+                    },
                     {'name': 'memory.malfind', 'description': 'Find malware', 'inputSchema': {}},
                     {'name': 'net.flow_summary', 'description': 'Network flows', 'inputSchema': {}},
                     {'name': 'verify.cross_check', 'description': 'Verify', 'inputSchema': {}},

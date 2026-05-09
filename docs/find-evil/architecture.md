@@ -372,9 +372,9 @@ The Hunt is a 5-state deterministic FSM. Each state defines tool whitelist + LLM
 └─────────────┘     └─────────┘     └─────────┘     └─────────┘     └──────┘
        │                 │              │                │              │
        ▼                 ▼              ▼                ▼              ▼
-  case.open      timeline.build    iocs.scan      verify.cross    report.append
-                 log.query         memory.*       _check          (terminal)
-                                   net.*
+  case.open      timeline.build    iocs.scan      verify.cross    (terminal)
+                 log.query         memory.*       _check
+                                   net.*          report.append
 ```
 
 | State | Purpose | Allowed Tools | LLM Autonomy |

@@ -12,7 +12,7 @@
 
 We acknowledge **Valhuntir** as the comprehensive DFIR reference platform (90+ tools, 22K-record RAG, Sigma rules, multi-backend orchestration). We do not claim to match its breadth. Instead, warvis focuses on three narrow differentiators:
 
-1. **Single Go binary** — No Python runtime, no Docker, no gateway. Deployable offline on a fresh SIFT VM in seconds.
+1. **Single Go control binary** — The Hunt FSM, resume budgets, and tool whitelist are enforced in Go; Python remains a local MCP tool runtime.
 2. **5-state Hunt FSM with compile-time tool whitelist** — Architectural guarantee that the agent cannot escape its forensic role, enforced at build time (not runtime).
 3. **Budget-preserving resume + kill-switch harness** — Every hunt is reproducible and verifiable in CI; interrupted hunts resume without re-burning LLM-turn quota.
 
@@ -57,7 +57,7 @@ The Gemma 4 LLM (via Ollama) autonomously interprets tool outputs and selects th
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/WoopsFactory/warvis-findEvil.git
+git clone https://github.com/WooYoungSang/warvis-findEvil.git
 cd warvis-findEvil
 ```
 
@@ -100,17 +100,18 @@ python -m pytest --co -q
 
 ### Prepare Evidence
 
-Place forensic evidence (disk images, memory dumps, log archives) in the `evidence/` directory:
+Place forensic evidence (disk images, memory dumps, log archives) under `/evidence/`. The MCP `case.open` contract intentionally accepts only absolute `/evidence/...` paths from the SIFT host perspective.
 
 ```bash
-mkdir -p evidence
-# Add your evidence files (e.g., evidence/test.img, evidence/memory.bin)
+mkdir -p /evidence 2>/dev/null || echo "Use the SIFT-provided /evidence mount or ask an operator to create it."
+# Add your evidence files (e.g., /evidence/test.img, /evidence/memory.bin)
+# If your evidence lives in this repo, symlink or copy it into /evidence before running warvis.
 ```
 
 ### Run Hunt
 
 ```bash
-./warvis/bin/warvis hunt evidence/test.img
+./warvis/bin/warvis hunt /evidence/test.img
 ```
 
 **Output**: Case directory `/cases/<case_id>/` with audit trail:
@@ -137,7 +138,7 @@ jq '.findings' /cases/<case_id>/report.json | head -20
 If a hunt is interrupted (network, Ollama timeout), resume with:
 
 ```bash
-./warvis/bin/warvis hunt evidence/test.img --case-id <case_id> --resume
+./warvis/bin/warvis hunt /evidence/test.img --case-id <case_id> --resume
 ```
 
 ---
@@ -158,7 +159,7 @@ warvis hunt <evidence_path> [--case-id <id>] [--resume]
 
 **Example**:
 ```bash
-warvis hunt evidence/disk.img
+warvis hunt /evidence/disk.img
 # Output: Case opened with case_id=abc123def456
 ```
 
@@ -198,8 +199,8 @@ warvis report <case_id> [--format json|html]
 | INITIALIZE | 0% | `case.open` | Ingest evidence, compute hashes |
 | TRACE | 70% | `timeline.build`, `log.query` | Build event timeline, identify anomalies |
 | SCAN | 90% | `iocs.scan`, `memory.*`, `net.*` | Hunt indicators, scan memory for artifacts |
-| EXPOSE | 60% | `verify.cross_check` | Correlate findings, validate hypotheses |
-| LOCK | 0% | `report.append` | Finalize audit trail, seal case |
+| EXPOSE | 60% | `verify.cross_check`, `report.append` | Correlate findings and append verified report entries |
+| LOCK | 0% | _(none — terminal)_ | Seal case after report entries are written |
 
 ### Component Stack
 
@@ -214,9 +215,9 @@ warvis report <case_id> [--format json|html]
 
 ### Known Constraints
 
-1. **Lite Scanners**: YARA and Plaso tools are emulated with synthetic patterns (not production-grade)
-2. **Synthetic Fixtures**: Test evidence is auto-generated; real DFIR samples pending
-3. **Agent Autonomy**: LLM decision gates (Tests 2 & 3) still in progress; some tool invocations require manual gates
+1. **Lite Scanners**: YARA/Plaso-style paths still include synthetic fixtures and are not production-grade detection content.
+2. **External artifacts pending**: Fresh SIFT VM clone-to-hunt evidence and the unlisted demo video are intentionally tracked as TODO/STOP items until captured.
+3. **Volatility3 last-hop caveat**: Existing traces prove FSM/MCP dispatch shape, but real vol3 firing from the agent loop is not yet directly demonstrated.
 4. **Ollama Dependency**: Requires local Ollama instance; no cloud LLM support yet
 5. **Recall**: ~60% on synthetic test suite; accuracy >80% pending real dataset tuning
 

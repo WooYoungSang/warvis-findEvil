@@ -31,8 +31,8 @@ func NewLoop(fsm hunt.FSM, mcpClient *mcp.Client, ollamaClient *ollama.Client, a
 		ollamaClient:     ollamaClient,
 		auditLog:         auditLog,
 		conversationHist: []ConversationTurn{},
-		maxHistorySize:   20, // Max 20 exchanges
-		maxToolOutputLen: 500, // Truncate tool outputs to 500 chars
+		maxHistorySize:   20,                // Max 20 exchanges
+		maxToolOutputLen: 500,               // Truncate tool outputs to 500 chars
 		stateTimeout:     600 * time.Second, // 10 minute timeout per state
 	}
 }
@@ -259,30 +259,77 @@ func (l *Loop) addToHistory(role, content string, metadata map[string]interface{
 
 // getAvailableTools returns the set of tools available in the current state.
 func (l *Loop) getAvailableTools(state hunt.State) []ToolInfo {
-	// Map FSM state to available tools
-	// In a real implementation, this would query the MCP client and filter by state
-	tools := []ToolInfo{}
+	if state == nil {
+		return []ToolInfo{}
+	}
 
-	// For now, return empty; in M4e, this will call mcpClient.ListTools() and filter
+	catalog := map[string]ToolInfo{
+		"case.open": {
+			Name:        "case.open",
+			Description: "Open a forensic case from /evidence and create the case sandbox.",
+		},
+		"timeline.build": {
+			Name:        "timeline.build",
+			Description: "Build a forensic timeline for the active case.",
+			Parameters:  map[string]interface{}{"case_id": "string", "limit": "integer optional"},
+		},
+		"log.query": {
+			Name:        "log.query",
+			Description: "Query structured logs and timeline records for suspicious activity.",
+			Parameters:  map[string]interface{}{"case_id": "string", "q": "string", "source": "evtx|syslog|audit|all optional"},
+		},
+		"iocs.scan": {
+			Name:        "iocs.scan",
+			Description: "Scan case evidence against YARA or Sigma indicators of compromise.",
+			Parameters:  map[string]interface{}{"case_id": "string", "ruleset": "yara_default|yara_custom|sigma"},
+		},
+		"memory.process_list": {
+			Name:        "memory.process_list",
+			Description: "Extract a process list from memory evidence using the configured SIFT backend.",
+			Parameters:  map[string]interface{}{"case_id": "string"},
+		},
+		"memory.malfind": {
+			Name:        "memory.malfind",
+			Description: "Detect suspicious memory regions and injected code candidates.",
+			Parameters:  map[string]interface{}{"case_id": "string", "pid": "integer optional"},
+		},
+		"net.flow_summary": {
+			Name:        "net.flow_summary",
+			Description: "Summarize network flows for a case or packet capture.",
+			Parameters:  map[string]interface{}{"case_id": "string optional", "pcap_id": "string optional"},
+		},
+		"verify.cross_check": {
+			Name:        "verify.cross_check",
+			Description: "Cross-check a finding against independent evidence before reporting.",
+			Parameters:  map[string]interface{}{"case_id": "string", "finding_id": "string", "method": "rerun|alt_tool|counter_evidence|all optional"},
+		},
+		"report.append": {
+			Name:        "report.append",
+			Description: "Append a verified finding to the case report.",
+			Parameters:  map[string]interface{}{"case_id": "string", "finding": "object"},
+		},
+	}
+
+	tools := make([]ToolInfo, 0, len(state.AllowedTools()))
+	for _, name := range state.AllowedTools() {
+		if info, ok := catalog[name]; ok {
+			tools = append(tools, info)
+			continue
+		}
+		tools = append(tools, ToolInfo{Name: name, Description: "State-allowed MCP tool."})
+	}
 	return tools
 }
 
 // isToolAllowed checks if a tool is allowed in a given FSM state.
 func isToolAllowed(state hunt.State, toolName string) bool {
-	// Simple mapping of state -> allowed tools
-	// In a real implementation, this might be more sophisticated
-	switch state.Name() {
-	case "INITIALIZE":
-		return toolName == "case.open"
-	case "TRACE":
-		return toolName == "timeline.build" || toolName == "log.query"
-	case "SCAN":
-		return toolName == "iocs.scan" || toolName == "memory.dump" || toolName == "memory.list"
-	case "EXPOSE":
-		return toolName == "verify.cross_check"
-	case "LOCK":
-		return toolName == "report.append"
-	default:
+	if state == nil {
 		return false
 	}
+	for _, allowed := range state.AllowedTools() {
+		if allowed == toolName {
+			return true
+		}
+	}
+	return false
 }

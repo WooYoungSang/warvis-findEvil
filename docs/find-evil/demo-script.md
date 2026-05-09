@@ -1,273 +1,158 @@
-# W.A.R.V.I.S Hunt Demo Script (≤5 minutes)
+# W.A.R.V.I.S. FIND EVIL Demo Script (≤5 minutes)
 
-**Automated Forensics Demo** | Shows all 5 FSM states: INITIALIZE, TRACE, SCAN, EXPOSE, LOCK
+**Goal:** show architectural constraints, agent self-correction, and a reproducible audit trail for the SANS FIND EVIL submission.
 
----
-
-## Setup
-
-### Prerequisites
-
-Before running this demo, ensure:
-
-1. **Ollama is running** with Gemma 4 model loaded:
-   ```bash
-   ollama serve
-   # In another terminal:
-   ollama pull gemma4:26b-a4b-it-q4_K_M
-   ```
-
-2. **W.A.R.V.I.S is built**:
-   ```bash
-   cd warvis
-   go build -o bin/warvis ./cmd/warvis
-   cd ..
-   ```
-
-3. **Test evidence exists**:
-   ```bash
-   mkdir -p evidence
-   # Ensure evidence/test.img is present (synthetic fixture)
-   ```
-
-### Total Time Estimate
-
-5 minutes including output inspection.
+This is a recorded screencast plan, not a live-only demo. Use the already captured traces under `repos/find-evil-fixtures/cases/sans-starter/` so the video is deterministic and honest.
 
 ---
 
-## Demo Sequence
-
-### Step 1: INITIALIZE — Open Case & Ingest Evidence (0:30)
+## Pre-flight
 
 ```bash
-./warvis/bin/warvis hunt evidence/test.img
+# Build binary used in the demo
+( cd warvis && go build -o bin/warvis ./cmd/warvis )
+
+# Optional: pre-warm the model before recording live snippets
+ollama serve
+ollama run gemma4:26b-a4b-it-q4_K_M 'ready'
+
+# SANS starter evidence path expected by case.open contract
+ls -lh /evidence/sans-starter/base-wkstn-05-memory.img
 ```
 
-**Expected Output**:
-```
-Initializing hunt...
-Case opened: case_id=hunt_20260507_001a
-Evidence: evidence/test.img
-State: INITIALIZE
-Tool: case.open
-Timestamp: 2026-05-07T10:23:45Z
-Hash (SHA256): a1b2c3d4e5f6...
-Next state: TRACE
-```
+Required evidence paths for screen capture:
 
-**Evidence**: Case directory created at `/cases/hunt_20260507_001a/`
-
-**Result**: ✅ INITIALIZE complete
+- 26B real-hunt trace: `repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace-26b/audit.jsonl`
+- Full deterministic FSM trace: `repos/find-evil-fixtures/cases/sans-starter/comprehensive-mock-trace/audit.jsonl`
+- Accuracy caveats: `docs/find-evil/accuracy-report.md`
+- Architecture diagram: `docs/find-evil/architecture.md` §11
 
 ---
 
-### Step 2: TRACE — Build Timeline & Query Logs (1:15)
+## Timeline
+
+### 0:00–0:15 — Problem statement
+
+Narration:
+
+> AI threats strike in minutes. W.A.R.V.I.S. is a local forensic IR agent whose architecture, not prompt discipline, prevents it from escaping its role.
+
+Show:
 
 ```bash
-./warvis/bin/warvis status hunt_20260507_001a
-```
-
-**Expected Output**:
-```
-Case: hunt_20260507_001a
-State: TRACE (2/5)
-Current Tool: timeline.build
-FSM Progress: 40%
-Events Indexed: 247
-Anomalies Found: 3
-Last Update: 2026-05-07T10:24:12Z
-```
-
-**Evidence**: Check timeline entries in audit log:
-```bash
-jq '.event_type' /cases/hunt_20260507_001a/audit.jsonl | head -5
-```
-
-**Output**:
-```
-"INITIALIZE"
-"timeline.build"
-"log.query"
-"timeline.build"
-"anomaly_detected"
-```
-
-**Result**: ✅ TRACE state entered, timeline built
-
----
-
-### Step 3: SCAN — Search for Indicators & Memory Artifacts (2:45)
-
-```bash
-./warvis/bin/warvis status hunt_20260507_001a
-```
-
-**Expected Output**:
-```
-Case: hunt_20260507_001a
-State: SCAN (3/5)
-Current Tool: iocs.scan
-FSM Progress: 60%
-IoCs Found: 5
-Memory Artifacts: 12
-Suspicious Processes: 2
-Last Update: 2026-05-07T10:25:30Z
-```
-
-**Evidence**: Inspect scan results in audit:
-```bash
-jq '.tool_name, .result.matches' /cases/hunt_20260507_001a/audit.jsonl | grep -A1 "iocs.scan" | head -10
-```
-
-**Output**:
-```
-"iocs.scan"
-{
-  "malware_hash": ["a1b2c3d4", "e5f6g7h8"],
-  "suspicious_domains": ["evil.local", "c2.attacker.net"],
-  "memory_artifacts": ["injected_code_0xDEADBEEF"]
-}
-```
-
-**Result**: ✅ SCAN state complete, indicators discovered
-
----
-
-### Step 4: EXPOSE — Cross-Check Findings (4:15)
-
-```bash
-./warvis/bin/warvis status hunt_20260507_001a
-```
-
-**Expected Output**:
-```
-Case: hunt_20260507_001a
-State: EXPOSE (4/5)
-Current Tool: verify.cross_check
-FSM Progress: 80%
-Validated Findings: 7
-Confidence Score: 0.89
-Last Update: 2026-05-07T10:26:00Z
-```
-
-**Evidence**: Review cross-check correlations:
-```bash
-jq '.result.correlation' /cases/hunt_20260507_001a/audit.jsonl | grep -i "cross_check" | head -3
-```
-
-**Output**:
-```
-{
-  "hypothesis": "ransomware_infection",
-  "supporting_evidence": ["encrypted_files", "ransom_note", "c2_communication"],
-  "confidence": 0.89
-}
-```
-
-**Result**: ✅ EXPOSE state complete, findings validated
-
----
-
-### Step 5: LOCK — Finalize Case & Seal Audit Trail (5:00)
-
-```bash
-./warvis/bin/warvis report hunt_20260507_001a
-```
-
-**Expected Output**:
-```
-Generating forensic report...
-Case: hunt_20260507_001a
-State: LOCK (5/5)
-FSM Progress: 100%
-Report Generated: /cases/hunt_20260507_001a/report.json
-Audit Trail Sealed: /cases/hunt_20260507_001a/audit.jsonl
-Timestamp: 2026-05-07T10:26:45Z
-Hunt completed successfully.
-```
-
-**Evidence**: View final report summary:
-```bash
-jq '.summary' /cases/hunt_20260507_001a/report.json
-```
-
-**Output**:
-```
-{
-  "case_id": "hunt_20260507_001a",
-  "severity": "HIGH",
-  "findings_count": 7,
-  "false_positives": 1,
-  "confidence_score": 0.89,
-  "recommended_action": "Isolate affected systems immediately",
-  "analyst_notes": "Evidence strongly suggests ransomware delivery via phishing email"
-}
-```
-
-**Result**: ✅ LOCK state complete, case sealed
-
----
-
-## Full Audit Trail Inspection
-
-View all state transitions:
-
-```bash
-jq -r '[.timestamp, .event_type, .current_state] | @csv' /cases/hunt_20260507_001a/audit.jsonl
-```
-
-**Output**:
-```
-2026-05-07T10:23:45Z,"case.open","INITIALIZE"
-2026-05-07T10:24:01Z,"timeline.build","TRACE"
-2026-05-07T10:24:12Z,"log.query","TRACE"
-2026-05-07T10:25:15Z,"iocs.scan","SCAN"
-2026-05-07T10:25:30Z,"memory.scan","SCAN"
-2026-05-07T10:26:00Z,"verify.cross_check","EXPOSE"
-2026-05-07T10:26:45Z,"report.append","LOCK"
+head -20 docs/find-evil/devpost-form-draft.md
 ```
 
 ---
 
-## Demo Caveats
+### 0:15–0:45 — Architecture constraint
 
-⚠️ **Important Notes**:
+Show the Mermaid/FSM section in `docs/find-evil/architecture.md` and explain:
 
-1. **Synthetic Fixtures**: This demo uses auto-generated test evidence. Real DFIR samples are pending to improve accuracy beyond ~60%.
+- One Go orchestrator owns the Hunt FSM: `INITIALIZE → TRACE → SCAN → EXPOSE → LOCK`.
+- Each state has compile-time allowed tools.
+- Python MCP tools expose structured forensic actions, not a generic shell.
+- Every LLM response, tool call, tool result, and transition is written to `audit.jsonl`.
 
-2. **Agent Autonomy**: The Gemma 4 LLM has ~70-90% autonomy in TRACE/SCAN/EXPOSE states. Some tool invocations require human gates (pending Tests 2 & 3 completion).
+Suggested command:
 
-3. **Lite Scanners**: YARA and Plaso tools are emulated with hardcoded patterns, not production-grade rules. Detection quality is for demonstration only.
-
-4. **Performance**: Hunt duration varies (30s–2min on synthetic data). Real investigations on large evidence may take longer.
-
-5. **Ollama Model**: Demo requires Gemma 4 at localhost:29134. Connection timeouts will pause the hunt; use `--resume` flag to restart.
+```bash
+grep -n "INITIALIZE\|TRACE\|SCAN\|EXPOSE\|LOCK" docs/find-evil/architecture.md | head -20
+```
 
 ---
 
-## Troubleshooting During Demo
+### 0:45–2:00 — Real 26B trace: self-correction instead of fabrication
+
+Show that the 26B run escalated when critical context was missing instead of inventing forensic data.
+
+```bash
+AUDIT=repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace-26b/audit.jsonl
+jq -c 'select(.event == "gemma_response") | {event, current_state, action_type, reason}' "$AUDIT"
+```
+
+Narration:
+
+> This is the self-correction moment. The agent does not fabricate a case identifier or fake findings. It emits an escalation with the reason in the audit trail, preserving analyst trust.
+
+Also show the SANS memory image target used for this lane:
+
+```bash
+ls -lh /evidence/sans-starter/base-wkstn-05-memory.img
+```
+
+---
+
+### 2:00–3:30 — Deterministic full FSM traversal
+
+Show the comprehensive mock trace exercising all five states and SCAN memory tools.
+
+```bash
+MOCK=repos/find-evil-fixtures/cases/sans-starter/comprehensive-mock-trace/audit.jsonl
+jq -r 'select(.event == "state_transition") | [.timestamp, .from, .to, .reason] | @tsv' "$MOCK"
+jq -r 'select(.event == "tool_called") | [.timestamp, .tool_name] | @tsv' "$MOCK"
+```
+
+Call out:
+
+- `INITIALIZE → TRACE → SCAN → EXPOSE → LOCK`
+- `memory.process_list` and `memory.malfind` are reached only in SCAN.
+- This trace proves loop/FSM/MCP dispatch shape, while the accuracy report honestly documents the remaining Volatility3 last-hop caveat.
+
+---
+
+### 3:30–4:30 — Audit integrity and honest accuracy caveat
+
+Show hash-chain and caveat docs:
+
+```bash
+python -m pytest tests/test_real_hunt_trace.py -q
+
+grep -n "honest\|caveat\|vol3\|26B\|real hunt" docs/find-evil/accuracy-report.md | head -20
+```
+
+Narration:
+
+> We do not claim production-grade IR accuracy without real-sample measurement. The submission separates measured synthetic recall, real SANS trace behavior, and known residuals.
+
+---
+
+### 4:30–5:00 — Positioning and close
+
+Show Valhuntir-aware positioning and repo link:
+
+```bash
+grep -n "Valhuntir\|smallest possible IR agent\|GitHub" docs/find-evil/valhuntir-comparison.md docs/find-evil/devpost-form-draft.md | head -20
+```
+
+Narration:
+
+> Valhuntir is the comprehensive DFIR reference. W.A.R.V.I.S. is deliberately smaller: a local binary, a strict FSM, MCP tool boundaries, and reproducible kill-switch evidence for airgapped or regulated response.
+
+End on:
+
+```text
+https://github.com/WooYoungSang/warvis-findEvil
+```
+
+---
+
+## Recording checklist
+
+- Video length ≤ 5 minutes.
+- Show `real-hunt-trace-26b` escalation/self-correction.
+- Show `comprehensive-mock-trace` full FSM traversal.
+- Show accuracy caveat; do not overclaim Volatility3 last-hop evidence.
+- Save local recording as `docs/find-evil/demo.mp4` (gitignored).
+- Upload unlisted video and paste URL into `docs/find-evil/devpost-form-draft.md`.
+
+---
+
+## Troubleshooting
 
 | Error | Cause | Fix |
-|-------|-------|-----|
-| "Connection refused: localhost:29134" | Ollama not running | `ollama serve` in new terminal |
-| "case_id not found" | Previous case wasn't saved | Check `/cases/` directory for existing case IDs |
-| "Hunt paused at TRACE state" | Ollama timeout | Run `warvis hunt evidence/test.img --case-id <id> --resume` |
-| "report.json missing" | Didn't reach LOCK state | Check with `warvis status <case_id>` and resume if needed |
-
----
-
-## Next Steps
-
-After this demo:
-
-1. **Run with your own evidence**: Replace `evidence/test.img` with real forensic samples (disk images, memory dumps)
-2. **Tune YARA rules**: Edit scanner config in `src/find_evil_mcp/scanners/` for production patterns
-3. **Integrate with DFIR workflow**: Output JSON reports can be ingested by Splunk, ELK, or custom dashboards
-4. **Extend tools**: Add new tool namespaces via MCP server plugin architecture
-
----
-
-**Total elapsed time: ~5 minutes**  
-**All 5 FSM states demonstrated: INITIALIZE → TRACE → SCAN → EXPOSE → LOCK**  
-**Ready for production DFIR analysis.**
+|---|---|---|
+| `localhost:29134` refused | Ollama not running | Start `ollama serve` and pre-warm Gemma 4 |
+| `/evidence/...` missing | SIFT evidence symlink/copy absent | Restore `/evidence/sans-starter/base-wkstn-05-memory.img` |
+| Hunt pauses at TRACE | Model timeout or missing context | Use recorded 26B audit to show escalation as self-correction |
+| Mock trace differs | Regenerated trace changed timestamps | Re-run trace tests and keep invariant-focused assertions |

@@ -66,8 +66,8 @@ func TestBuildSystemPromptMultipleTools(t *testing.T) {
 			},
 		},
 		{
-			Name:        "memory.dump",
-			Description: "Dump process memory",
+			Name:        "memory.process_list",
+			Description: "Extract process list",
 			Parameters: map[string]interface{}{
 				"pid": "integer",
 			},
@@ -79,8 +79,8 @@ func TestBuildSystemPromptMultipleTools(t *testing.T) {
 	if !strings.Contains(prompt, "iocs.scan") {
 		t.Error("prompt should contain iocs.scan")
 	}
-	if !strings.Contains(prompt, "memory.dump") {
-		t.Error("prompt should contain memory.dump")
+	if !strings.Contains(prompt, "memory.process_list") {
+		t.Error("prompt should contain memory.process_list")
 	}
 	if !strings.Contains(prompt, "Scan for indicators of compromise") {
 		t.Error("prompt should contain tool description")
@@ -96,7 +96,7 @@ func TestBuildSystemPromptStateDescriptions(t *testing.T) {
 		{&hunt.TraceState{}, "timeline.build"},
 		{&hunt.ScanState{}, "iocs.scan"},
 		{&hunt.ExposeState{}, "verify.cross_check"},
-		{&hunt.LockState{}, "report.append"},
+		{&hunt.LockState{}, "terminal state"},
 	}
 
 	for _, tt := range states {

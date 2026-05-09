@@ -59,12 +59,11 @@ func TestLoopAddToHistory(t *testing.T) {
 	}
 }
 
-
 func TestIsToolAllowedByState(t *testing.T) {
 	tests := []struct {
-		state     hunt.State
-		tool      string
-		allowed   bool
+		state   hunt.State
+		tool    string
+		allowed bool
 	}{
 		{&hunt.InitializeState{}, "case.open", true},
 		{&hunt.InitializeState{}, "timeline.build", false},
@@ -72,9 +71,12 @@ func TestIsToolAllowedByState(t *testing.T) {
 		{&hunt.TraceState{}, "log.query", true},
 		{&hunt.TraceState{}, "iocs.scan", false},
 		{&hunt.ScanState{}, "iocs.scan", true},
-		{&hunt.ScanState{}, "memory.dump", true},
+		{&hunt.ScanState{}, "memory.process_list", true},
+		{&hunt.ScanState{}, "memory.malfind", true},
+		{&hunt.ScanState{}, "net.flow_summary", true},
 		{&hunt.ExposeState{}, "verify.cross_check", true},
-		{&hunt.LockState{}, "report.append", true},
+		{&hunt.ExposeState{}, "report.append", true},
+		{&hunt.LockState{}, "report.append", false},
 	}
 
 	for _, tt := range tests {
@@ -382,11 +384,11 @@ func TestGemmaResponseAuditExplainability(t *testing.T) {
 		"timestamp":     time.Now().UTC().Format(time.RFC3339),
 		"event":         "gemma_response",
 		"action_type":   mockAction.Type,
-		"tool_name":     mockAction.ToolName,        // NEW in M2
-		"arguments":     mockAction.Arguments,        // NEW in M2
-		"reason":        mockAction.Reason,           // NEW in M2 (untruncated)
-		"raw_output":    truncated,                   // RENAMED from gemma_output
-		"current_state": currentStateName,            // NEW in M2
+		"tool_name":     mockAction.ToolName,  // NEW in M2
+		"arguments":     mockAction.Arguments, // NEW in M2
+		"reason":        mockAction.Reason,    // NEW in M2 (untruncated)
+		"raw_output":    truncated,            // RENAMED from gemma_output
+		"current_state": currentStateName,     // NEW in M2
 	}
 
 	if err := auditLog.Append(expectedAuditEvent); err != nil {
@@ -441,5 +443,27 @@ func TestGemmaResponseAuditExplainability(t *testing.T) {
 	// Reason should NOT be truncated (full string preserved)
 	if !bytes.Contains([]byte(auditText), []byte(`Need to build timeline for forensic analysis`)) {
 		t.Fatal("RED: reason must be untruncated (full string preserved)")
+	}
+}
+
+func TestGetAvailableToolsUsesStateAllowedTools(t *testing.T) {
+	loop := NewLoop(nil, nil, nil, nil)
+	tools := loop.getAvailableTools(&hunt.ScanState{})
+
+	names := map[string]bool{}
+	for _, tool := range tools {
+		names[tool.Name] = true
+		if tool.Description == "" {
+			t.Fatalf("tool %s should include a prompt description", tool.Name)
+		}
+	}
+
+	for _, required := range []string{"iocs.scan", "memory.process_list", "memory.malfind", "net.flow_summary"} {
+		if !names[required] {
+			t.Fatalf("SCAN prompt tools should include %s", required)
+		}
+	}
+	if names["timeline.build"] {
+		t.Fatal("SCAN prompt tools should not include TRACE-only timeline.build")
 	}
 }

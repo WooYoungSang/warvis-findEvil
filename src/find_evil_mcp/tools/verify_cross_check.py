@@ -64,36 +64,67 @@ async def handle_verify_cross_check(payload: dict) -> dict:
     # Try to read the finding
     finding = _read_finding(report_path, finding_id)
 
-    agreements = []
-    disagreements = []
+    agreements: list[dict] = []
+    disagreements: list[dict] = []
     confidence = 0.0
     verdict = "inconclusive"
-    tool_used = []
+    tool_used: list[str] = []
 
     if finding:
-        # If finding exists, we can attempt cross-check
-        # For now, we implement a simple heuristic: check if evidence exists
-
-        # Rerun timeline.build to verify timeline consistency
+        # If finding exists, attempt a read-only corroboration pass.
+        # Contract shape is intentionally structured: every observation records
+        # method, human-readable observation, and confidence weight.
         if method in ["rerun", "all"]:
             try:
                 timeline_result = await handle_timeline_build({"case_id": case_id})
-                if timeline_result.get("event_count", 0) > 0:
-                    count = timeline_result["event_count"]
-                    agreements.append(f"timeline.build confirmed {count} events")
-                    confidence += 0.3
-                    tool_used.append("plaso")
-            except Exception:
-                pass
+                tool_used.append("timeline.build")
+                count = timeline_result.get("event_count", 0)
+                if count > 0:
+                    weight = 0.8
+                    agreements.append(
+                        {
+                            "method": "rerun",
+                            "observation": f"timeline.build confirmed {count} events",
+                            "weight": weight,
+                        }
+                    )
+                    confidence += weight
+                else:
+                    disagreements.append(
+                        {
+                            "method": "rerun",
+                            "observation": "timeline.build returned no corroborating events",
+                            "weight": 0.2,
+                        }
+                    )
+            except Exception as exc:
+                disagreements.append(
+                    {
+                        "method": "rerun",
+                        "observation": f"timeline.build failed during cross-check: {exc}",
+                        "weight": 0.2,
+                    }
+                )
 
-        # If we have agreement, increase confidence
-        if agreements:
-            confidence = min(0.8, confidence + 0.5)  # Cap at 0.8 without additional sources
-            verdict = "confirmed" if confidence > 0.6 else "partial"
+        confidence = min(1.0, confidence)
+        if agreements and confidence >= 0.6:
+            verdict = "confirmed"
+        elif disagreements and not agreements:
+            verdict = "contradicted"
+            confidence = max(confidence, 0.2)
         else:
-            # No agreements found; finding is uncertain
-            verdict = "uncertain"
-            confidence = 0.2
+            verdict = "inconclusive"
+            confidence = max(confidence, 0.2)
+    else:
+        disagreements.append(
+            {
+                "method": "counter_evidence",
+                "observation": "finding_id was not present in findings.jsonl",
+                "weight": 0.2,
+            }
+        )
+        confidence = 0.0
+        verdict = "inconclusive"
 
     # Build output
     output = {

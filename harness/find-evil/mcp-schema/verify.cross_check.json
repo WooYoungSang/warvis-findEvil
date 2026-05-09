@@ -19,12 +19,20 @@
         },
         "method": {
           "type": "string",
-          "enum": ["rerun", "alt_tool", "counter_evidence", "all"],
+          "enum": [
+            "rerun",
+            "alt_tool",
+            "counter_evidence",
+            "all"
+          ],
           "default": "all",
           "description": "Cross-check method. rerun=same tool again, alt_tool=different tool, counter_evidence=look for contradictions, all=all methods."
         }
       },
-      "required": ["case_id", "finding_id"],
+      "required": [
+        "case_id",
+        "finding_id"
+      ],
       "additionalProperties": false,
       "description": "Case and finding identifiers required; verification method optional (default all)."
     },
@@ -48,7 +56,11 @@
             "properties": {
               "method": {
                 "type": "string",
-                "enum": ["rerun", "alt_tool", "counter_evidence"],
+                "enum": [
+                  "rerun",
+                  "alt_tool",
+                  "counter_evidence"
+                ],
                 "description": "Verification method used."
               },
               "observation": {
@@ -62,7 +74,11 @@
                 "description": "Confidence weight (0-1) for this agreement."
               }
             },
-            "required": ["method", "observation", "weight"],
+            "required": [
+              "method",
+              "observation",
+              "weight"
+            ],
             "additionalProperties": false
           },
           "description": "Array of corroborating observations."
@@ -74,7 +90,11 @@
             "properties": {
               "method": {
                 "type": "string",
-                "enum": ["rerun", "alt_tool", "counter_evidence"],
+                "enum": [
+                  "rerun",
+                  "alt_tool",
+                  "counter_evidence"
+                ],
                 "description": "Verification method used."
               },
               "observation": {
@@ -88,7 +108,11 @@
                 "description": "Confidence weight (0-1) for this disagreement."
               }
             },
-            "required": ["method", "observation", "weight"],
+            "required": [
+              "method",
+              "observation",
+              "weight"
+            ],
             "additionalProperties": false
           },
           "description": "Array of contradicting observations."
@@ -101,7 +125,11 @@
         },
         "verdict": {
           "type": "string",
-          "enum": ["confirmed", "contradicted", "inconclusive"],
+          "enum": [
+            "confirmed",
+            "contradicted",
+            "inconclusive"
+          ],
           "description": "Final verdict based on cross-check evidence."
         },
         "tool_used": {
@@ -117,12 +145,24 @@
           "description": "ISO 8601 timestamp of cross-check completion."
         }
       },
-      "required": ["case_id", "finding_id", "agreements", "disagreements", "confidence", "verdict", "tool_used", "generated_at"],
+      "required": [
+        "case_id",
+        "finding_id",
+        "agreements",
+        "disagreements",
+        "confidence",
+        "verdict",
+        "tool_used",
+        "generated_at"
+      ],
       "additionalProperties": false,
       "description": "Cross-check results with confidence scoring and final verdict."
     }
   },
-  "required": ["inputSchema", "outputSchema"],
+  "required": [
+    "inputSchema",
+    "outputSchema"
+  ],
   "additionalProperties": false,
   "x-mcp-capability": {
     "name": "verify.cross_check",
@@ -137,7 +177,7 @@
       "case_id and finding_id must be valid UUIDs",
       "finding_id must exist in /cases/<case_id>/report/findings.jsonl",
       "method enum restricts to rerun, alt_tool, counter_evidence, or all",
-      "agreements and disagreements must each be non-empty arrays (at least one observation expected)",
+      "agreements and disagreements arrays are always present; one may be empty when the other records the observation",
       "weight values constrain to 0-1 (floating-point confidence)",
       "confidence final score computed from weights (implementer responsibility)",
       "verdict enum constrains to confirmed, contradicted, or inconclusive",

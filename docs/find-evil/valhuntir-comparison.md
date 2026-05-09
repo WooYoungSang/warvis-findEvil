@@ -10,7 +10,7 @@
 
 We cannot — and do not try to — match Valhuntir on breadth. Instead we focus on three narrow axes Valhuntir does not occupy:
 
-1. **Single Go binary, no Python runtime, no Docker** — `warvis hunt` runs offline on a fresh SIFT VM in seconds.
+1. **Single Go control binary with local MCP tools** — `warvis hunt` keeps the FSM, resume budgets, and tool whitelist in a compiled Go boundary while Python remains a local forensic MCP runtime.
 2. **5-state Hunt FSM with per-state tool whitelist enforced in Go** — architecturally guaranteed self-restraint, not gateway-mediated discipline.
 3. **Budget-preserving resume + kill-switch test harness** — every hunt is reproducible, interruptible, and verifiable in CI.
 
@@ -32,7 +32,7 @@ This is not a slogan. The matrix below is honest about where Valhuntir wins.
 | Deterministic state model | gateway-level discipline (prompt-shaped) | hardcoded 5-state FSM in Go (compile-time) | us (architectural) |
 | Resume | unspecified | budget-preserving with state.json | us |
 | Kill-switch test harness | unspecified | `make kill-switch-check` 5/5 PASS | us |
-| Cold start | Python + 8 stdio subprocesses + gateway | single binary launch | us (offline) |
+| Cold start | Python + 8 stdio subprocesses + gateway | Go control binary + local Python MCP runtime | mixed |
 | API key required | Claude API in default path | none (Ollama local) | us (airgap-ready) |
 
 \*Mixed: Valhuntir's choice maximizes intelligence (Claude); ours maximizes airgap-readiness.
@@ -54,14 +54,14 @@ This is not a slogan. The matrix below is honest about where Valhuntir wins.
 
 We selected these three from a candidate set of seven (offline-only, Go binary, FSM determinism, resume safety, kill-switch harness, sub-second cold start, hardcoded whitelist). Each is verifiable from public artifacts in this repo.
 
-### 4.1 Single Go Binary, Offline, No Python Runtime
+### 4.1 Go Control Binary, Offline-Oriented Local Runtime
 
-`warvis/bin/warvis` is a statically-linked Go binary (7.8 MB). On a fresh SIFT VM:
-- No `pip install`. No Docker. No gateway.
-- No outbound network in default path (Ollama is `localhost:29134`).
-- Demonstrable advantage in airgapped IR (e.g., classified or regulated environments where Claude API egress is forbidden).
+`warvis/bin/warvis` is the compiled control boundary for the Hunt FSM and whitelist enforcement. The forensic tool surface still runs through the local Python MCP server documented in the README, so this is not a "no Python runtime" claim. On a fresh SIFT VM the intended advantage is:
+- No Docker gateway or cloud API key in the default path.
+- No outbound network during hunt execution once Ollama/model and Python dependencies are already available locally.
+- A small compiled orchestrator boundary for regulated IR environments where agent behavior must be inspectable and constrained.
 
-Valhuntir's default path requires Claude API egress; even the LibreChat option needs a hosted LLM endpoint. Our binary runs offline once Ollama is initialized locally. This is not a marketing claim—it is architectural.
+Valhuntir's default path requires Claude API egress; even the LibreChat option needs a hosted LLM endpoint. Our path optimizes for local/offline operation, while keeping the Python MCP dependency explicit.
 
 ### 4.2 5-State Hunt FSM — Compile-Time Tool Whitelist
 

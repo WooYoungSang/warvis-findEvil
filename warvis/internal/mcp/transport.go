@@ -117,11 +117,11 @@ func (t *Transport) Send(req Request) (Response, error) {
 		delete(t.pending, req.ID)
 		t.mu.Unlock()
 		return Response{}, fmt.Errorf("transport context cancelled")
-	case <-time.After(30 * time.Second):
+	case <-time.After(120 * time.Second):
 		t.mu.Lock()
 		delete(t.pending, req.ID)
 		t.mu.Unlock()
-		return Response{}, fmt.Errorf("request timeout after 30s")
+		return Response{}, fmt.Errorf("request timeout after 120s")
 	}
 }
 
