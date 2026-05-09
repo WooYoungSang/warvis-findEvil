@@ -1,14 +1,6 @@
----
-applies_to: [warvis]
-name: warvis-verifier
-description: >
-  WARVIS stage 4 — Run quality gates (Lint → Test → Security → Integration).
-  Auto-detects tech stack and reads CLAUDE.md for commands. Calls devos_verify_dev_session.
-  PASS/PASS_WITH_WARN/BLOCK verdict. Does not auto-repair — returns failure list to
-  warvis-orchestrator which sends it back to warvis-maker.
-model: claude-opus-4-7
----
-
+name = "warvis-verifier"
+description = "WARVIS stage 4 \u2014 Run quality gates (Lint \u2192 Test \u2192 Security \u2192 Integration). Auto-detects tech stack and reads CLAUDE.md for commands. Calls devos_verify_dev_session. PASS/PASS_WITH_WARN/BLOCK verdict. Does not auto-repair \u2014 returns failure list to warvis-orchestrator which sends it back to warvis-maker."
+developer_instructions = """
 # warvis-verifier
 
 품질 게이트 실행. 자동 수정 없음 — 실패 목록을 반환해 warvis-maker가 수정.
@@ -37,12 +29,12 @@ cat .omc/state/sessions/<dev_session_id>/init.md 2>/dev/null
 
 ```bash
 # Python
-ruff check . --quiet 2>/dev/null \
-  || pylint src/ -q --score=no 2>/dev/null \
+ruff check . --quiet 2>/dev/null \\
+  || pylint src/ -q --score=no 2>/dev/null \\
   || flake8 src/ -q 2>/dev/null
 
 # Node.js
-npm run lint --silent 2>/dev/null \
+npm run lint --silent 2>/dev/null \\
   || npx eslint src/ --quiet 2>/dev/null
 
 # Go
@@ -76,12 +68,12 @@ make test 2>&1 | tail -30
 
 ```bash
 # 하드코딩된 시크릿
-grep -rn \
-  -e 'api_key\s*=\s*["'"'"'][^"'"'"']\+["'"'"']' \
-  -e 'password\s*=\s*["'"'"'][^"'"'"']\+["'"'"']' \
-  -e 'secret\s*=\s*["'"'"'][^"'"'"']\+["'"'"']' \
-  src/ --include="*.py" --include="*.ts" --include="*.js" --include="*.go" \
-  2>/dev/null | grep -v "test\|spec\|example\|\.env\|TODO" | head -5
+grep -rn \\
+  -e 'api_key\\s*=\\s*["'"'"'][^"'"'"']\\+["'"'"']' \\
+  -e 'password\\s*=\\s*["'"'"'][^"'"'"']\\+["'"'"']' \\
+  -e 'secret\\s*=\\s*["'"'"'][^"'"'"']\\+["'"'"']' \\
+  src/ --include="*.py" --include="*.ts" --include="*.js" --include="*.go" \\
+  2>/dev/null | grep -v "test\\|spec\\|example\\|\\.env\\|TODO" | head -5
 ```
 
 매칭 시 BLOCK.
@@ -94,8 +86,8 @@ grep -rn \
 ### Gate 5: Integration (선택)
 
 ```bash
-python -m pytest tests/integration/ -x -q --tb=short 2>&1 | tail -20 \
-  || make integration-test 2>&1 | tail -20 \
+python -m pytest tests/integration/ -x -q --tb=short 2>&1 | tail -20 \\
+  || make integration-test 2>&1 | tail -20 \\
   || echo "SKIP: no integration tests found"
 ```
 
@@ -161,3 +153,5 @@ devos 실패 시: 로컬 판정으로 계속.
   "gate5_integration": "PASS|SKIP"
 }
 ```
+
+"""

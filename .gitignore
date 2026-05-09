@@ -36,3 +36,12 @@ repos/find-evil-fixtures/cases/sans-starter/*
 !repos/find-evil-fixtures/cases/sans-starter/real-hunt-trace-26b/**
 !repos/find-evil-fixtures/cases/sans-starter/comprehensive-mock-trace/
 !repos/find-evil-fixtures/cases/sans-starter/comprehensive-mock-trace/**
+.claude/agents/CHANGELOG.local.md
+
+# Local agent/runtime harness directories
+.agents/
+.omx/
+.omc/
+.cluade/
+.claude/
+.codex/

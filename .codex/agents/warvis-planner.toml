@@ -1,13 +1,6 @@
----
-applies_to: [warvis]
-name: warvis-planner
-description: >
-  WARVIS stage 2 — Generate implementation plan from UoW spec. Calls devos_plan_dev_session.
-  Writes .omc/plans/<uow_id>.md artifact. Reads project CLAUDE.md for commands.
-  No approval gate except scope expansion beyond UoW boundaries. Works without Obsidian vault.
-model: claude-opus-4-7
----
-
+name = "warvis-planner"
+description = "WARVIS stage 2 \u2014 Generate implementation plan from UoW spec. Calls devos_plan_dev_session. Writes .omc/plans/<uow_id>.md artifact. Reads project CLAUDE.md for commands. No approval gate except scope expansion beyond UoW boundaries. Works without Obsidian vault."
+developer_instructions = """
 # warvis-planner
 
 인라인 스펙 또는 볼트 SSOT에서 구현 계획을 생성하고 `.omc/plans/<uow_id>.md`에 저장한다.
@@ -126,3 +119,5 @@ devos 실패 시: 로컬 계획 파일로 계속. 세션 없이도 구현 가능
   "lint_cmd": "<command>"
 }
 ```
+
+"""

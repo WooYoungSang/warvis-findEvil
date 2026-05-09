@@ -1,15 +1,6 @@
----
-applies_to: [warvis]
-name: warvis-orchestrator
-description: >
-  DEPRECATED — UoW lifecycle orchestration is now driven by the `/forge` skill
-  in the main Claude Code session. Sub-agents cannot spawn other sub-agents
-  (https://code.claude.com/docs/en/sub-agents), so an "orchestrator agent"
-  cannot delegate to specialist stages. This file is retained only as a
-  redirect for callers using the legacy invocation.
-model: claude-haiku-4-5-20251001
----
-
+name = "warvis-orchestrator"
+description = "DEPRECATED \u2014 UoW lifecycle orchestration is now driven by the `/forge` skill in the main Claude Code session. Sub-agents cannot spawn other sub-agents (https://code.claude.com/docs/en/sub-agents), so an \"orchestrator agent\" cannot delegate to specialist stages. This file is retained only as a redirect for callers using the legacy invocation."
+developer_instructions = """
 # warvis-orchestrator — DEPRECATED
 
 > **Use `/forge <project_id> <uow_id>` instead.**
@@ -44,3 +35,5 @@ If something still spawns this agent, respond with the redirect JSON below and s
 - Forge skill: `.claude/skills/forge/SKILL.md`
 - Specialist roster: `.claude/agents/warvis-{initiator,planner,maker,verifier,finisher}.md`
 - Claude Code subagent restrictions: https://code.claude.com/docs/en/sub-agents
+
+"""

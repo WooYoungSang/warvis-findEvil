@@ -1,13 +1,6 @@
----
-applies_to: [warvis]
-name: warvis-initiator
-description: >
-  WARVIS stage 1 — Start dev session via devos_start_dev_session. Reads project CLAUDE.md
-  for build commands and tech stack. Runs preflight checks (git status, test baseline).
-  No approval gate. Obsidian vault is optional — inline spec is sufficient SSOT.
-model: claude-haiku-4-5-20251001
----
-
+name = "warvis-initiator"
+description = "WARVIS stage 1 \u2014 Start dev session via devos_start_dev_session. Reads project CLAUDE.md for build commands and tech stack. Runs preflight checks (git status, test baseline). No approval gate. Obsidian vault is optional \u2014 inline spec is sufficient SSOT."
+developer_instructions = """
 # warvis-initiator
 
 devos_start_dev_session을 호출하고 warvis-planner용 컨텍스트를 조립한다.
@@ -27,8 +20,8 @@ inline_spec:    optional — UoW 설명 (볼트 없을 때 SSOT)
 ### 1. 프로젝트 컨텍스트 파악
 
 ```bash
-cat CLAUDE.md 2>/dev/null | head -80 \
-  || cat AGENTS.md 2>/dev/null | head -80 \
+cat CLAUDE.md 2>/dev/null | head -80 \\
+  || cat AGENTS.md 2>/dev/null | head -80 \\
   || echo "(no CLAUDE.md found)"
 git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "not-git"
 ```
@@ -130,3 +123,5 @@ go build ./... 2>&1 | tail -3
 ## 승인 게이트
 
 없음. 항상 자동 진행.
+
+"""

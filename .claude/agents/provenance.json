@@ -1,7 +1,7 @@
 {
   "base_version": "unknown",
-  "installed_at": "2026-05-02T03:12:23Z",
-  "source_repo": "/app",
-  "source_commit": "unknown",
-  "divergence_score": 0.0
+  "divergence_score": 0.5,
+  "installed_at": "2026-05-09T12:15:35Z",
+  "source_commit": "2a8adc27f",
+  "source_repo": "/home/jang/Workspace/warvis-ignis"
 }

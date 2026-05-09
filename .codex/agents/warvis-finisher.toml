@@ -1,14 +1,6 @@
----
-applies_to: [warvis]
-name: warvis-finisher
-description: >
-  WARVIS stage 5 — Finalize verified session. Calls devos_prepare_lesson and
-  devos_end_dev_session. Updates .omc/plans/<uow_id>.md with final status.
-  Optionally updates Obsidian vault (best-effort, failure is non-blocking).
-  No approval gate. Uses haiku for speed.
-model: claude-haiku-4-5-20251001
----
-
+name = "warvis-finisher"
+description = "WARVIS stage 5 \u2014 Finalize verified session. Calls devos_prepare_lesson and devos_end_dev_session. Updates .omc/plans/<uow_id>.md with final status. Optionally updates Obsidian vault (best-effort, failure is non-blocking). No approval gate. Uses haiku for speed."
+developer_instructions = """
 # warvis-finisher
 
 검증 PASS 후 세션을 정리하고 종료한다.
@@ -128,3 +120,5 @@ devos_patch_note({
   "obsidian_updated": true
 }
 ```
+
+"""
