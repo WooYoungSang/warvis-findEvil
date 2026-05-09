@@ -24,6 +24,15 @@ type BudgetStatus struct {
 
 // FSM is the Hunt State Machine interface.
 type FSM interface {
+	// CaseID returns the UUID assigned to this hunt by case.open. Stable for
+	// the lifetime of the FSM. Used by the agent loop to thread the case
+	// identifier into the LLM system prompt so subsequent tool calls can
+	// reference it without hallucination.
+	CaseID() string
+	// SaveState persists the current FSM state + budgets to the registry's
+	// state.json. Called by the agent loop after transitions so state.json
+	// stays in sync with the audit trail.
+	SaveState() error
 	// CurrentState returns the current Hunt state.
 	CurrentState() State
 	// IsToolAllowed checks if a tool is available in the current state.
@@ -89,6 +98,25 @@ func New(caseID string, auditLog *AuditLog, registry *Registry) *HuntFSM {
 			StateStartedAt:          time.Now().UTC().Format(time.RFC3339),
 		},
 	}
+}
+
+// CaseID returns the UUID assigned by case.open at FSM construction.
+func (f *HuntFSM) CaseID() string {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.caseID
+}
+
+// SaveState persists the current FSM state + budgets to the registry's
+// state.json. Used by the agent loop to keep state.json in sync after
+// internal transitions (e.g. agent action="state_complete").
+func (f *HuntFSM) SaveState() error {
+	if f.registry == nil {
+		return nil
+	}
+	// CurrentState() / GetBudgetStatus() take read locks internally;
+	// don't double-lock here.
+	return f.registry.Save(f.CaseID(), f.CurrentState(), f.GetBudgetStatus())
 }
 
 // CurrentState returns the current FSM state.

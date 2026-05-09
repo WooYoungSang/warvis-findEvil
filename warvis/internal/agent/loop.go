@@ -52,10 +52,11 @@ func (l *Loop) Run(ctx context.Context) error {
 		default:
 		}
 
-		// Build system prompt with current state and allowed tools
+		// Build system prompt with current state, allowed tools, and the
+		// active case_id so Gemma can reuse it in subsequent tool calls.
 		currentState := l.fsm.CurrentState()
 		tools := l.getAvailableTools(currentState)
-		systemPrompt := BuildSystemPrompt(currentState, tools)
+		systemPrompt := BuildSystemPrompt(currentState, tools, l.fsm.CaseID())
 
 		// Prepare messages for Ollama (system + conversation history)
 		messages := l.buildMessages(systemPrompt)
@@ -90,8 +91,22 @@ func (l *Loop) Run(ctx context.Context) error {
 			}
 
 		case "state_complete":
-			fmt.Fprintf(os.Stderr, "[Agent] State complete, transitioning...\n")
-			return nil
+			from := l.fsm.CurrentState().Name()
+			fmt.Fprintf(os.Stderr, "[Agent] State complete in %s, advancing FSM...\n", from)
+			if err := l.fsm.Transition("agent state_complete"); err != nil {
+				// LOCK is terminal — Transition returns error there. Treat as natural exit.
+				fmt.Fprintf(os.Stderr, "[Agent] Cannot advance from %s: %v\n", from, err)
+				return nil
+			}
+			to := l.fsm.CurrentState().Name()
+			// Persist new state to state.json so it stays in sync with audit.jsonl.
+			if err := l.fsm.SaveState(); err != nil {
+				fmt.Fprintf(os.Stderr, "[Agent] Warning: failed to persist state after %s -> %s transition: %v\n", from, to, err)
+				// Don't fail the loop — audit.jsonl is canonical.
+			}
+			fmt.Fprintf(os.Stderr, "[Agent] Advanced %s -> %s\n", from, to)
+			// Continue the loop; next iteration rebuilds system prompt for the new state.
+			continue
 
 		case "escalate":
 			fmt.Fprintf(os.Stderr, "[Agent] Escalating: %s\n", action.Reason)

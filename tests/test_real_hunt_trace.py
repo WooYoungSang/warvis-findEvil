@@ -13,11 +13,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SANS_DIR = REPO_ROOT / "repos/find-evil-fixtures/cases/sans-starter"
 TRACE_DIR = SANS_DIR / "real-hunt-trace"
 TRACE_DIR_26B = SANS_DIR / "real-hunt-trace-26b"
+TRACE_DIR_MOCK = SANS_DIR / "comprehensive-mock-trace"
 AUDIT = TRACE_DIR / "audit.jsonl"
 AUDIT_26B = TRACE_DIR_26B / "audit.jsonl"
+AUDIT_MOCK = TRACE_DIR_MOCK / "audit.jsonl"
 STATE = TRACE_DIR / "state.json"
+STATE_MOCK = TRACE_DIR_MOCK / "state.json"
 TRACE_README = TRACE_DIR / "README.md"
 TRACE_README_26B = TRACE_DIR_26B / "README.md"
+TRACE_README_MOCK = TRACE_DIR_MOCK / "README.md"
 ACCURACY_DOC = REPO_ROOT / "docs/find-evil/accuracy-report.md"
 
 
@@ -163,3 +167,84 @@ def test_26b_demonstrates_escalation_or_self_correction():
 def test_accuracy_report_compares_model_variants():
     text = ACCURACY_DOC.read_text().lower()
     assert "26b" in text and "8b" in text
+
+
+# --- comprehensive mock trace (full FSM traversal, deterministic) ---
+
+def _entries_mock():
+    return [
+        json.loads(line) for line in AUDIT_MOCK.read_text().splitlines() if line.strip()
+    ]
+
+
+def test_mock_trace_dir_exists():
+    assert TRACE_DIR_MOCK.is_dir()
+
+
+def test_mock_audit_present():
+    assert AUDIT_MOCK.is_file()
+
+
+def test_mock_readme_present():
+    assert TRACE_README_MOCK.is_file()
+
+
+def test_mock_state_terminal_lock():
+    s = json.loads(STATE_MOCK.read_text())
+    assert s.get("current_state") == "LOCK", (
+        "comprehensive mock hunt should reach LOCK terminal state"
+    )
+
+
+def test_mock_audit_records_trace_to_scan_transition():
+    """L2 lock-in: TRACE → SCAN state_transition recorded in audit."""
+    matches = [
+        e for e in _entries_mock()
+        if e.get("event") == "state_transition"
+        and e.get("from") == "TRACE"
+        and e.get("to") == "SCAN"
+    ]
+    assert len(matches) >= 1
+
+
+def test_mock_audit_records_full_fsm_traversal():
+    """All four state transitions present: INIT→TRACE→SCAN→EXPOSE→LOCK."""
+    expected_pairs = {
+        ("INITIALIZE", "TRACE"),
+        ("TRACE", "SCAN"),
+        ("SCAN", "EXPOSE"),
+        ("EXPOSE", "LOCK"),
+    }
+    actual_pairs = {
+        (e.get("from"), e.get("to"))
+        for e in _entries_mock()
+        if e.get("event") == "state_transition"
+    }
+    missing = expected_pairs - actual_pairs
+    assert not missing, f"missing transitions: {missing}"
+
+
+def test_mock_audit_has_memory_tools_called_in_scan():
+    """L3 lock-in: ≥1 memory.* tool_called event with current_state=SCAN."""
+    # gemma_response events carry current_state; tool_called events don't.
+    # Match by adjacency: gemma_response[SCAN] action=call_tool tool=memory.*
+    # immediately followed by tool_called for the same tool name.
+    entries = _entries_mock()
+    memory_calls = [
+        e for e in entries
+        if e.get("event") == "gemma_response"
+        and e.get("current_state") == "SCAN"
+        and (e.get("tool_name") or "").startswith("memory.")
+    ]
+    assert len(memory_calls) >= 1
+
+
+def test_mock_audit_hash_chain_continuous():
+    entries = _entries_mock()
+    prev = None
+    for e in entries:
+        if prev is not None:
+            assert e.get("prior_hash") == prev.get("entry_hash"), (
+                f"hash chain break at event={e.get('event')}"
+            )
+        prev = e

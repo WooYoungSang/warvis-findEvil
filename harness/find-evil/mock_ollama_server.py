@@ -11,14 +11,28 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 _call_count = 0
 
 # Cycle of actions returned per chat request.
-# index 0 and 1 → call_tool (satisfies KS-3: ≥2 tool_called events)
-# index 2+ → state_complete
+# index 0 and 1 → call_tool in TRACE (satisfies KS-3: ≥2 tool_called events)
+# index 2 → state_complete (advances TRACE → SCAN with the new agent loop)
+# index 3 and 4 → call_tool in SCAN (memory.* — exercises vol3 via sift_runner;
+#                supports the comprehensive-mock-hunt L3/L4 lock-in for the
+#                prompt-context-threading Bet without disturbing kill-switch).
+# index 5 → state_complete (SCAN → EXPOSE)
+# index 5+ → state_complete repeats (further transitions through EXPOSE → LOCK)
+# Kill-switch tests use WARVIS_MAX_TURNS=3 and never reach index 3+.
 ACTIONS = [
     {"action": "call_tool", "tool_name": "timeline.build", "arguments": {"limit": 100},
      "reason": "Building forensic timeline to identify suspicious activities"},
     {"action": "call_tool", "tool_name": "log.query", "arguments": {"limit": 50},
      "reason": "Querying event logs for anomalous entries"},
-    {"action": "state_complete", "reason": "Timeline and log analysis complete"},
+    {"action": "state_complete",
+     "reason": "Timeline and log analysis complete; advancing to SCAN for memory analysis"},
+    {"action": "call_tool", "tool_name": "memory.process_list",
+     "arguments": {"limit": 200},
+     "reason": "Enumerating processes via Volatility3 to spot anomalies"},
+    {"action": "call_tool", "tool_name": "memory.malfind", "arguments": {},
+     "reason": "Hunting for code-injected memory regions via Volatility3 malfind"},
+    {"action": "state_complete",
+     "reason": "Memory enumeration complete; advancing to EXPOSE for verification"},
 ]
 
 

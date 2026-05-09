@@ -358,3 +358,70 @@ to support this safer behavior; 26B exercised it, 8B did not.
 We are not claiming 26B is "the right model" — we are claiming the *Hunt
 FSM design accommodates both* and the 26B run produces a cleaner audit
 trail. Both are committed for transparency.
+
+### 8b. Comprehensive mock-driven trace (Bet `prompt-context-threading`)
+
+After both real-LLM traces stalled in TRACE due to case_id propagation,
+the `prompt-context-threading` Bet shipped four agent-loop fixes:
+
+1. **`hunt.FSM.CaseID()` getter** + **`hunt.FSM.SaveState()` persistence**
+   on the FSM interface (with implementations on `HuntFSM`).
+2. **`BuildSystemPrompt(state, tools, caseID)`** — the system prompt
+   now includes an `## Active Case` block with the verbatim `case_id`
+   and an explicit "use this case_id in every tool call" instruction.
+3. **`state_complete` agent action now actually transitions the FSM**.
+   Previously it was a no-op `return nil`; the agent loop now calls
+   `FSM.Transition()` + `FSM.SaveState()` and `continue`s the loop into
+   the next state, so a single `warvis hunt` invocation can traverse
+   the entire INITIALIZE → TRACE → SCAN → EXPOSE → LOCK chain.
+4. **System-prompt state-progression guidance** explicitly tells the
+   LLM to emit `state_complete` after a small number of tool calls in
+   each state.
+
+To prove these fixes deterministically, mock Ollama
+(`harness/find-evil/mock_ollama_server.py`) was extended with two
+SCAN-state actions (`memory.process_list`, `memory.malfind`) and two
+trailing `state_complete`s for SCAN→EXPOSE→LOCK. The kill-switch tests
+use `WARVIS_MAX_TURNS=3` and never reach the new actions, so the
+existing 5/5 PASS regression is unaffected.
+
+The resulting **comprehensive-mock-trace** is committed at
+`repos/find-evil-fixtures/cases/sans-starter/comprehensive-mock-trace/`
+and contains a 22-line audit.jsonl recording the full FSM traversal
+plus all four state transitions, plus tool_called events for both
+memory.* tools in SCAN.
+
+What this trace proves (Bet lock-in conditions, status):
+
+| Lock-in | What it asserts | Status |
+|:-:|---|:--:|
+| L1 | case_id is visible to the LLM on the next turn | ✅ via system-prompt §"Active Case" block |
+| L2 | `state_transition` from TRACE → SCAN appears in audit.jsonl | ✅ at line 10 of mock trace |
+| L3 | ≥1 `tool_called` for `memory.process_list` or `memory.malfind` in SCAN | ✅ both, mock trace lines 11–16 |
+| L4 | `tool_used="volatility3"` propagated into the audit / vol3 actually fires | **⚠️ partial** — see honest caveat below |
+| L5 | hash chain `entry_hash` / `prior_hash` continuous | ✅ verified by `tests/test_real_hunt_trace.py::test_mock_audit_hash_chain_continuous` |
+| L6 | pytest 83→90 PASS | ✅ |
+| L7 | kill-switch 5/5 PASS | ✅ (unchanged after Makefile assertion was loosened from `state == TRACE` to `state != INITIALIZE`) |
+| L8 | `go test ./...` PASS | ✅ |
+| L9 | ruff clean | ✅ |
+
+**Honest caveat (L4)**: All five SCAN-state events in the mock trace
+share wall-clock timestamp `10:10:11Z`. `vol -f 3GiB.img
+windows.pslist.PsList` takes 30–60 s on this hardware (B2 smoke-test
+data); five events in one wall-clock second is impossible if vol3
+actually fires. The MCP tools `memory.process_list` /
+`memory.malfind` (Phase 1+2 locked) short-circuit to an empty result
+when their `case_id` argument is missing — and the deterministic mock
+Ollama emits hard-coded action arguments without case_id awareness.
+So the agent-loop → MCP-tool dispatch is fully exercised, but the
+**last hop into the vol3 subprocess** is not demonstrated by the mock
+trace. The B2 `smoke-vol-windows-info.txt` evidence anchors that vol3
+*does* parse this exact image when invoked directly.
+
+8 of 9 lock-ins are green. L4 is a residual that would need either
+(a) a real Gemma reliably reaching SCAN with proper case_id propagation
+into tool arguments — currently stochastic — or (b) a more
+sophisticated mock that processes the prompt context to inject the
+runtime case_id into action arguments. Both are out of the
+prompt-context-threading Bet's 2-day appetite and are documented for
+future work.

@@ -1,0 +1,25 @@
+{
+  "case_id": "dd1950af-6758-4a85-8482-005725d2bb75",
+  "current_state": "LOCK",
+  "created_at": "2026-05-09T10:10:11Z",
+  "updated_at": "2026-05-09T10:10:11Z",
+  "budgets": {
+    "MaxLLMTurns": 10,
+    "CurrentLLMTurns": 7,
+    "MaxInvalidJSONAttempts": 10,
+    "CurrentInvalidJSONAttempts": 0,
+    "MaxDuplicateToolCalls": 5,
+    "CurrentDuplicateToolCalls": 0,
+    "MaxToolCallsTotal": 100,
+    "CurrentToolCallsTotal": 0,
+    "MaxStateDurationSeconds": 600,
+    "StateStartedAt": "2026-05-09T10:10:11Z"
+  },
+  "lock_state": {
+    "CaseID": "dd1950af-6758-4a85-8482-005725d2bb75",
+    "Status": "CLOSED",
+    "ReportPath": "/cases/dd1950af-6758-4a85-8482-005725d2bb75/report/findings.jsonl",
+    "Summary": "",
+    "ClosedAt": "2026-05-09T10:10:11Z"
+  }
+}

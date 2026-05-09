@@ -8,12 +8,22 @@ import (
 	"github.com/woopsfactory/warvis/internal/hunt"
 )
 
-// BuildSystemPrompt constructs the system prompt for Gemma 4 given the current FSM state and available tools.
-func BuildSystemPrompt(state hunt.State, tools []ToolInfo) string {
+// BuildSystemPrompt constructs the system prompt for Gemma 4 given the current
+// FSM state, available tools, and the active case_id (empty string is allowed
+// for tests where case identity is irrelevant).
+func BuildSystemPrompt(state hunt.State, tools []ToolInfo, caseID string) string {
 	var sb strings.Builder
 
 	// Core system role
 	sb.WriteString("You are WARVIS, a forensic investigator AI system for analyzing digital evidence.\n\n")
+
+	// Active case context — must precede tool catalog so Gemma sees it before
+	// being told what arguments tools accept.
+	if caseID != "" {
+		sb.WriteString("## Active Case\n")
+		sb.WriteString(fmt.Sprintf("case_id: %s\n", caseID))
+		sb.WriteString("Use this case_id verbatim in every tool call's arguments when the tool's schema accepts a case_id field. Do not invent or alter it.\n\n")
+	}
 
 	// Hunt protocol explanation
 	sb.WriteString("## Hunt Protocol\n")
@@ -88,11 +98,13 @@ func getStateDescription(state hunt.State) string {
 
 	case "TRACE":
 		return `You are building the forensic timeline. Use timeline.build and log.query to extract temporal evidence.
-		Goal: Identify suspicious events, anomalies, and activities that deviate from baseline.`
+		Goal: Identify suspicious events, anomalies, and activities that deviate from baseline.
+		Advancement: After ONE timeline.build (and optionally one log.query) call, return action="state_complete" to advance to SCAN where memory and IOC tools become available. Do not repeat timeline.build with similar arguments.`
 
 	case "SCAN":
-		return `You are performing deep forensic analysis. Use iocs.scan, memory.*, and net.* tools to detect indicators of compromise.
-		Goal: Identify malware, lateral movement, persistence mechanisms, and exfiltration paths.`
+		return `You are performing deep forensic analysis. Use iocs.scan, memory.process_list, memory.malfind, and net.flow_summary to detect indicators of compromise.
+		Goal: Identify malware, lateral movement, persistence mechanisms, and exfiltration paths.
+		Advancement: After running at least one memory.* tool, return action="state_complete" to advance to EXPOSE for cross-verification.`
 
 	case "EXPOSE":
 		return `You are preparing findings for expert review. Use verify.cross_check to validate hypotheses and correlate evidence.
